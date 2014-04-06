@@ -1,0 +1,57 @@
+.cm-s-trip span.cm-comment {color: #ca6;}
+.cm-s-trip span.cm-atom {color: #aaa;}
+
+.cm-s-trip span.cm-keyword {color: #3bf;}
+.cm-s-trip span.cm-operator {color: #3bf;}
+
+.cm-s-trip span.cm-number {color: #f80;}
+.cm-s-trip span.cm-string {color: #ff0;}
+
+.cm-s-trip span.cm-property,
+.cm-s-trip span.cm-attribute {color: #0c0;}
+.cm-s-trip span.cm-variable,
+.cm-s-trip span.cm-variable-2,
+.cm-s-trip span.cm-def {color: #0b0;}
+
+.cm-s-trip span.cm-bracket {color: #f00;}
+.cm-s-trip span.cm-tag {color: #dd2;}
+.cm-s-trip span.cm-link {color: #3bf;}
+.cm-s-trip span.cm-error {background: #000; color: #f00;}
+
+.cm-s-trip.CodeMirror { background: #000; color: #ddd; }
+.cm-s-trip div.CodeMirror-selected { background: #333; }
+.cm-s-trip .CodeMirror-gutters {background: #000; border-right: 3px solid #222;}
+.cm-s-trip .CodeMirror-linenumber {color: #666;}
+.cm-s-trip .CodeMirror-cursor {border-left: 2px solid #0f0 !important;}
+
+.cm-s-trip .CodeMirror-activeline-background {background: #320;}
+
+.cm-s-trip .CodeMirror-foldmarker {
+    text-shadow: none;
+    font-size: 0;
+}
+.cm-s-trip .CodeMirror-foldmarker:before {
+    font-size: 10px;
+    font-weight: bold;
+    color: black;
+    background-color: #0a0;
+    content: " . . . ";
+}
+.cm-s-trip.CodeMirror-focused .cm-matchhighlight,
+.cm-s-trip .CodeMirror-matchingbracket {
+    text-decoration: underline;
+    color: #0f0;
+}
+
+.cm-s-trip .CodeMirror-foldgutter {
+    width: 12px;
+}
+.cm-s-trip .CodeMirror-foldgutter-open,
+.cm-s-trip .CodeMirror-foldgutter-folded {
+    font-size: 20px;
+    position: relative;
+    top: -3px;
+}
+.cm-s-trip .CodeMirror-foldgutter-folded {
+    color: #0a0;
+}
