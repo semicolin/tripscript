@@ -127,6 +127,14 @@ canvas {
 #file {
     display: none;
 }
+#status {
+    /*padding-left: 10px;*/
+    z-index: 200;
+    position: relative;
+    top: 10px;
+    text-align: center;
+    color: #eee;
+}
 #playlist {
     width: 100%;
     margin-top: 0px;

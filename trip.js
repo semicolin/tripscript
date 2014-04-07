@@ -1,5 +1,9 @@
 function Trip() {
-    var audioContext, source, analyser, playing, startTime, playTime, $playlist, $song, filesToAdd, autoId, g_files,
+    var STOPPED = 0,
+        PAUSED = 1,
+        LOADING = 2,
+        PLAYING = 3;
+    var audioContext, fileReader, source, analyser, status, startTime, playTime, $playlist, $song, filesToAdd, autoId, g_files,
         canvas, ctx, width, height, frame, animId, editor, scriptName, dynamicCode;
     
     function init() {
@@ -25,7 +29,7 @@ function Trip() {
         $('#save').on('click', saveScript);
         $('#delete').on('click', deleteScript);
         $('#scripts').on('change', onScriptChange);
-        $('#playlist>tbody').on('click','tr', changeSong);
+        $('#playlist>tbody').on('click','tr', onSongClick);
         $('#playlist>tbody').on('dragstart', 'tr', onDragStart);
         $('#playlist>tbody').on('dragenter', 'tr', onDragEnter);
         $('#playlist>tbody').on('dragover', 'tr', onDragOver);
@@ -259,42 +263,55 @@ function Trip() {
         $('#song' + file.id).html(createPlaylistRowCells(file));
     }
     function clearPlaylist() {
-        if (playing) {
-            playing = false;
+        if (status === PLAYING) {
+            status = STOPPED;
             source.stop();
+            stopVis();
         }
         $playlist.empty();
     }
-    function changeSong(e) {
+    function onSongClick(e) {
         e.preventDefault();
         e.stopPropagation();
-        if (playing) {
-            playing = false;
-            source.stop();
-            $song.removeClass('playing');
-        }
-        $song = $(this);
-        openFile($song.data('file'));
+        changeSong($(this));
         return false;
     }
+    function changeSong(newSong) {
+        if (status === PLAYING) {
+            status = STOPPED;
+            source.stop();
+            stopVis();
+            $song.removeClass('playing');
+        } else if (status === PAUSED) {
+            $song.removeClass('playing');
+            $('#pause').text('Pause');
+        } else if (status === LOADING) {
+            fileReader.abort();
+            $song.removeClass('playing');
+        }
+        $song = newSong;
+        openFile($song.data('file'));
+    }
     function openFile(filename) {
-        var fr = new FileReader();
-        fr.onload = onFileLoad;
-        // fr.onerror = onFileError;
-        fr.readAsArrayBuffer(filename);
+        fileReader = new FileReader();
+        status = LOADING;
+        $('#status').text("Loading file...");
+        fileReader.onload = onFileLoad;
+        fileReader.readAsArrayBuffer(filename);
         $song.addClass('playing');
     }
     function onFileLoad(e) {
         var file = e.target.result;
         playTime = 0;
-        audioContext.decodeAudioData(file, play);
+        $('#status').text("Decoding audio data...");
+        audioContext.decodeAudioData(file, play.bind(audioContext, $song));
     }
     function onFileError(e) {
         // noop
     }
     function onAudioEnd() {
-        if (playing) {
-            playing = false;
+        if (status === PLAYING) {
+            status = STOPPED;
             $song.removeClass('playing');
             $song = $song.next();
             if ($song) {
@@ -303,36 +320,29 @@ function Trip() {
         }
     }
     function next(e) {
-        source.stop();
+        changeSong($song.next());
     }
     function pause(e) {
-        if (playing) {
-            playing = false;
+        if (status === PLAYING) {
+            status = PAUSED;
             source.stop();
-            playTime += audioContext.currentTime - startTime;
             stopVis();
+            playTime += audioContext.currentTime - startTime;
             e.currentTarget.innerHTML = 'Resume';
-        } else {
-            play(source.buffer);
+        } else if (status === PAUSED) {
+            play($song, source.buffer);
             e.currentTarget.innerHTML = 'Pause';
+        } else if (status === LOADING) {
+            status = PAUSED;
         }
-        console.log(playTime);
     }
-    function resume() {
-        var buffer = source.buffer;
-        source = audioContext.createBufferSource();
-        source.onended = onAudioEnd;
-        source.connect(audioContext.destination);
-        source.connect(analyser);
-        source.buffer = buffer;
-        source.start(0, pauseTime);
-        startTime = audioContext.currentTime;
-        playTime = 0;
-        playing = true;
-        startVis();
+    function play(decodedSong, buffer) {
+        if (decodedSong !== $song) {
+            // song was changed after we started loading it.
+            return;
+        }
+        $('#status').text("");
         
-    }
-    function play(buffer) {
         // Analyser
         analyser = audioContext.createAnalyser();
         analyser.smoothingTimeConstant = 0.2;
@@ -344,10 +354,11 @@ function Trip() {
         source.onended = onAudioEnd;
         source.connect(audioContext.destination);
         source.connect(analyser);
+        
         source.start(0, playTime);
         
         startTime = audioContext.currentTime;
-        playing = true;
+        status = PLAYING;
         startVis();
     }
     function startVis() {
