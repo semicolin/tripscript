@@ -4,7 +4,7 @@ function Trip() {
         LOADING = 2,
         PLAYING = 3;
     var audioContext, fileReader, source, analyser, status, startTime, playTime, $playlist, $song, filesToAdd, autoId, g_files,
-        canvas, ctx, width, height, frame, animId, editor, scriptName, dynamicCode;
+        canvas, ctx, width, height, frame, animId, editor, scriptName, dynamicCode, loadedScripts, dirty;
     
     function init() {
         initApi();
@@ -17,7 +17,7 @@ function Trip() {
         ctx = canvas.getContext('2d');
         resize();
         
-        // hook up events
+        // events
         $(window).on('resize', resize);
         $('#browse').on('click', function() { $('#file').click(); });
         $('#file').on('change', onFileChange);
@@ -54,8 +54,6 @@ function Trip() {
         audioContext = new AudioContext();
     }
     function initCode() {
-        dynamicCode = {};
-        
         // create code editor
         editor = CodeMirror($('#editor')[0], {
             theme: 'trip',
@@ -102,6 +100,13 @@ function Trip() {
         localStorage['recent'] = scriptName;
     }
     function onScriptChange(e) {
+        // warn about unsaved changes
+        if (editor.getValue() !== localStorage.getItem('script_' + scriptName)) {
+            if (!confirm("Warning: Your changes have not been saved!\n\nDiscard changes?")) {
+                $("#scripts").val(scriptName);
+                return;
+            }
+        }
         loadScript(this.value);
     }
     function loadScript(name) {
@@ -120,7 +125,7 @@ function Trip() {
         CodeMirror.commands.selectAll(editor);
         CodeMirror.commands.indentAuto(editor);
         editor.getDoc().setSelection({line: 0, ch:0});
-        dynamicCode.main = new Function(getParamNames(defaultScript), script);
+        resetDynamicCode(script);
     }
     function saveScript() {
         var script = editor.getValue();
@@ -132,7 +137,7 @@ function Trip() {
         }
         localStorage.setItem('script_' + scriptName, script);
         localStorage['recent'] = scriptName;
-        dynamicCode.main = new Function(getParamNames(defaultScript), script);
+        resetDynamicCode(script);
         listScripts();
         resetVis();
     }
@@ -142,6 +147,12 @@ function Trip() {
             scriptName = null;
             listScripts();
         }
+    }
+    function resetDynamicCode(mainScript) {
+        dynamicCode = {};
+        loadedScripts = {};
+        dynamicCode.main = new Function(getParamNames(defaultScript), mainScript);
+        loadedScripts[scriptName] = dynamicCode.main;
     }
     function getParamNames(func) {
         var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
@@ -257,7 +268,7 @@ function Trip() {
         var albumText = tags.album ? tags.album + ' (' + tags.year + ')' : '';
         var album =  '<td class="album">' + albumText + '</td>';
         var title =  '<td class="title">' + tags.title + '</td>';
-        var track =  '<td class="track num">' + tags.track + '.</td>';
+        var track =  '<td class="track num">' + parseInt(tags.track,10) + '.</td>';
         return index + artist + album + track + title;
     }
     function updatePlaylistRow(file) {
@@ -401,17 +412,33 @@ function Trip() {
         frame += 1;
         var frequency = getFrequencyData(analyser);
         var waveform = getWaveformData(analyser);
-        dynamicCode.main(ctx, frame, width, height, frequency, waveform);
+        var args = [ctx, frame, width, height, frequency, waveform];
+        var include = includeScript.bind(dynamicCode, args);
+        args.push(include);
+        dynamicCode.main.apply(dynamicCode, args);
         startVis();
     }
-    function defaultScript(ctx, frame, width, height, frequency, waveform) {
-        /* Pre-Defined Variables:
-         * ctx: 2D drawing context
+    function includeScript(args, name) {
+        var func;
+        if (name in loadedScripts) {
+            func = loadedScripts[name];
+        } else {
+            var script = localStorage.getItem('script_' + name);
+            func = new Function(getParamNames(defaultScript), script);
+            loadedScripts[name] = func;
+        }
+        var include = arguments.callee.bind(dynamicCode, args);
+        args.push(include);
+        func.apply(dynamicCode, args);
+    }
+    function defaultScript(ctx, frame, width, height, frequency, waveform, include) {
+        /* ctx: 2D drawing context
          * frame: current frame number
          * width: width of the drawing canvas
          * height: height of the drawing canvas
          * frequency: array of frequency data
          * waveform: array of waveform data
+         * include(): run another script
          */
         function drawCircle(r) {
             ctx.beginPath();
