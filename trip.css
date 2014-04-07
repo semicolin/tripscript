@@ -192,6 +192,12 @@ canvas {
 #playlist .num {
     text-align: right;
 }
+#playlist .playing {
+    color: #3bf;
+}
+#playlist .dragging {
+    color: #ff0;
+}
 #playlist .index {
     width: 20px;
     border-right: 3px solid #222;
@@ -203,11 +209,12 @@ canvas {
 #playlist thead .index {
     border-right: 0;
 }
-#playlist .playing {
-    color: #3bf;
+#playlist .delete {
+    padding-right: 5px;
+    color: #666;
 }
-#playlist .dragging {
-    color: #ff0;
+#playlist .delete:hover {
+    color: #c00;
 }
 /* Line Numbers */
 #playlist { counter-reset: line-number; }

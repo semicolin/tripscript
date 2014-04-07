@@ -29,6 +29,7 @@ function Trip() {
         $('#save').on('click', saveScript);
         $('#delete').on('click', deleteScript);
         $('#scripts').on('change', onScriptChange);
+        $('#playlist>tbody').on('click','.delete', onSongDelete);
         $('#playlist>tbody').on('click','tr', onSongClick);
         $('#playlist>tbody').on('dragstart', 'tr', onDragStart);
         $('#playlist>tbody').on('dragenter', 'tr', onDragEnter);
@@ -343,7 +344,8 @@ function Trip() {
         var album =  '<td class="album">' + albumText + '</td>';
         var title =  '<td class="title">' + tags.title + '</td>';
         var track =  '<td class="track num">' + parseInt(tags.track,10) + '.</td>';
-        return index + artist + album + track + title;
+        var remove = '<td class="delete num">&times;</td>' ;
+        return index + artist + album + track + title + remove;
     }
     function updatePlaylistRow(file) {
         $('#song' + file.id).html(createPlaylistRowCells(file));
@@ -355,6 +357,17 @@ function Trip() {
             stopVis();
         }
         $playlist.empty();
+    }
+    function onSongDelete(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $row = $(this).closest('tr');
+        if (status === PLAYING && $row[0].id === $song[0].id) {
+            status = STOPPED;
+            source.stop();
+            stopVis();
+        }
+        $row.remove();
     }
     function onSongClick(e) {
         e.preventDefault();
@@ -398,6 +411,7 @@ function Trip() {
     function onAudioEnd() {
         if (status === PLAYING) {
             status = STOPPED;
+            stopVis();
             $song.removeClass('playing');
             $song = $song.next();
             if ($song) {
