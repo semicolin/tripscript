@@ -4,7 +4,7 @@ function Trip() {
         LOADING = 2,
         PLAYING = 3;
     var audioContext, fileReader, source, analyser, status, startTime, playTime, $playlist, $song, filesToAdd, autoId, g_files,
-        canvas, ctx, width, height, frame, animId, editor, scriptName, dynamicCode, loadedScripts, dirty;
+        canvas, ctx, width, height, frame, animId, editor, scriptName, dynamicCodeContext, dynamicCodeScripts, dirty;
     
     function init() {
         initApi();
@@ -62,9 +62,17 @@ function Trip() {
             indentWithTabs: false,
             highlightSelectionMatches: true,
             matchBrackets: true,
+            lint: {
+                options: {
+                    eqnull: true,
+                    laxbreak: true,
+                    laxcomma: true,
+                    sub: true
+                }
+            },
             //styleActiveLine: true,
             foldGutter: true,
-            gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+            gutters: ["CodeMirror-lint-markers","CodeMirror-linenumbers", "CodeMirror-foldgutter"],
             extraKeys: {
                 'Tab': function(cm) {
                     if (cm.getSelection().length > 0) {
@@ -125,7 +133,8 @@ function Trip() {
         CodeMirror.commands.selectAll(editor);
         CodeMirror.commands.indentAuto(editor);
         editor.getDoc().setSelection({line: 0, ch:0});
-        resetDynamicCode(script);
+        clearRegisteredScripts();
+        registerScript(scriptName, script);
     }
     function saveScript() {
         var script = editor.getValue();
@@ -137,9 +146,10 @@ function Trip() {
         }
         localStorage.setItem('script_' + scriptName, script);
         localStorage['recent'] = scriptName;
-        resetDynamicCode(script);
         listScripts();
-        resetVis();
+        clearRegisteredScripts();
+        registerScript(scriptName, script)
+        //resetVis();
     }
     function deleteScript() {
         if (scriptName) {
@@ -148,11 +158,75 @@ function Trip() {
             listScripts();
         }
     }
-    function resetDynamicCode(mainScript) {
-        dynamicCode = {};
-        loadedScripts = {};
-        dynamicCode.main = new Function(getParamNames(defaultScript), mainScript);
-        loadedScripts[scriptName] = dynamicCode.main;
+    function clearRegisteredScripts() {
+        dynamicCodeContext = {};
+        dynamicCodeScripts = {};
+    }
+    function registerScript(name, script) {
+        // Syntax check
+        JSHINT(script);
+        for (var i=0; i<JSHINT.errors.length; i++) {
+            var err = JSHINT.errors[i];
+            if (err.code[0] === 'E') {
+                err.script = name;
+                showError(err);
+                return null;
+            }
+        }
+        // Register the function
+        var func = new Function(getParamNames(defaultScript), script);
+        dynamicCodeScripts[name] = func;
+        clearError();
+        return func;
+    }
+    function showError(err) {
+        if (err.reason) { // JSHINT
+            var errStr = 'Error: ' + err.reason
+                       + '<br /> Script: ' + err.script 
+                       + '<br /> Line: ' + err.line 
+                       + '<br /> Char: ' + err.character;
+            console.log(err.reason, err.script, err.line, err.character);
+        } else { // Runtime exception
+            var errStr = 'Error: ' + err.message;
+            console.log(err.message, err.stack);
+        }
+        $('#error').html(errStr).show();
+    }
+    function clearError() {
+        $('#error').empty().hide();
+    }
+    function showStatus(msg) {
+        $('#status').text(msg).show();
+    }
+    function clearStatus() {
+        $('#status').empty().hide();
+    }
+    function checkScriptSyntaxMessy(script, success, error) {
+        // this ugly function is necessary because javascript does not give you a line number
+        // for syntax errors in eval()ed code. so we do syntax check using a DOM script element.
+        var syntaxError = null;
+        var previousErrorHandler = window.onerror;
+        var el = document.createElement('script');
+        el.type = 'text/javascript';
+        el.innerHTML = '(function(){\n' + script + '});'; // wrap in a function so it doesn't execute
+        window.onerror = function(msg,uri,line,col) {
+            syntaxError = {
+                message: msg,
+                lineNumber: line-1,
+                columnNumber: col
+            }
+            error(syntaxError);
+            document.body.removeChild(el);
+            return true;
+        };
+        el.onload = function() {
+            window.onerror = previousErrorHandler;
+            if(!syntaxError) {
+                success();
+            }
+            document.body.removeChild(el);
+        };
+        document.body.appendChild(el);
     }
     function getParamNames(func) {
         var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
@@ -175,11 +249,11 @@ function Trip() {
             resize();
         }
         if (parseInt($ctrl.css('marginLeft')) === 0) {
-            $ctrl.animate({ marginLeft: $ctrl.outerWidth() },{complete:hidden});
-            $vis.animate({ width: '100%' });
+            $ctrl.animate({ marginLeft: $ctrl.outerWidth() },{duration:200,complete:hidden});
+            $vis.animate({ width: '100%' },{duration:200});
         } else {
-            $ctrl.animate({ marginLeft: 0 },{complete:visible});
-            $vis.animate({ width: '50%' });
+            $ctrl.animate({ marginLeft: 0 },{duration:200,complete:visible});
+            $vis.animate({ width: '50%' },{duration:200});
         }
     }
     function changeTab(e) {
@@ -307,7 +381,7 @@ function Trip() {
     function openFile(filename) {
         fileReader = new FileReader();
         status = LOADING;
-        $('#status').text("Loading file...");
+        showStatus("Loading file...");
         fileReader.onload = onFileLoad;
         fileReader.readAsArrayBuffer(filename);
         $song.addClass('playing');
@@ -315,7 +389,7 @@ function Trip() {
     function onFileLoad(e) {
         var file = e.target.result;
         playTime = 0;
-        $('#status').text("Decoding audio data...");
+        showStatus("Decoding audio data...");
         audioContext.decodeAudioData(file, play.bind(audioContext, $song));
     }
     function onFileError(e) {
@@ -353,7 +427,7 @@ function Trip() {
             // song was changed after we started loading it.
             return;
         }
-        $('#status').text("");
+        clearStatus();
         
         // Analyser
         analyser = audioContext.createAnalyser();
@@ -376,15 +450,10 @@ function Trip() {
     function startVis() {
         animId = requestAnimationFrame(tick);
     }
-    function resetVis() {
-        if (animId) {
-            cancelAnimationFrame(animId);
-            startVis();
-        }
-    }
     function stopVis() {
         if (animId) {
             cancelAnimationFrame(animId);
+            animId = null;
         }
     }
     function getFrequencyData(analyser) {
@@ -413,23 +482,31 @@ function Trip() {
         var frequency = getFrequencyData(analyser);
         var waveform = getWaveformData(analyser);
         var args = [ctx, frame, width, height, frequency, waveform];
-        var include = includeScript.bind(dynamicCode, args);
+        var include = includeScript.bind(this, args);
         args.push(include);
-        dynamicCode.main.apply(dynamicCode, args);
+        var func = dynamicCodeScripts[scriptName];
+        if (func != null) {
+            try {
+                func.apply(dynamicCodeContext, args);
+            } catch (ex) {
+                showError(ex);
+            }
+        }
         startVis();
     }
     function includeScript(args, name) {
         var func;
-        if (name in loadedScripts) {
-            func = loadedScripts[name];
+        if (name in dynamicCodeScripts) {
+            func = dynamicCodeScripts[name];
         } else {
             var script = localStorage.getItem('script_' + name);
-            func = new Function(getParamNames(defaultScript), script);
-            loadedScripts[name] = func;
+            func = registerScript(name, script);
         }
-        var include = arguments.callee.bind(dynamicCode, args);
-        args.push(include);
-        func.apply(dynamicCode, args);
+        if (func != null) {
+            var include = arguments.callee.bind(dynamicCodeContext, args);
+            args.push(include);
+            func.apply(dynamicCodeContext, args);
+        }
     }
     function defaultScript(ctx, frame, width, height, frequency, waveform, include) {
         /* ctx: 2D drawing context
