@@ -254,7 +254,8 @@ function Trip() {
         var tags = file.tags || { artist:'', album:'', year:'', title:file.name, track:'0' };
         var index = '<td class="num index"></td>';
         var artist = '<td class="artist">' + tags.artist + '</td>';
-        var album =  '<td class="album">' + tags.album + ' (' + tags.year + ')</td>';
+        var albumText = tags.album ? tags.album + ' (' + tags.year + ')' : '';
+        var album =  '<td class="album">' + albumText + '</td>';
         var title =  '<td class="title">' + tags.title + '</td>';
         var track =  '<td class="track num">' + tags.track + '.</td>';
         return index + artist + album + track + title;
