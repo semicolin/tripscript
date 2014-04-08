@@ -26,9 +26,10 @@ function Trip() {
         $('#next').on('click', next);
         $('#toggle').on('click', toggleControls);
         $('.tab').on('click', changeTab);
-        $('#save').on('click', saveScript);
-        $('#delete').on('click', deleteScript);
         $('#scripts').on('change', onScriptChange);
+        $('#save').on('click', onSaveClick);
+        $('#saveas').on('click', onSaveAsClick);
+        $('#delete').on('click', deleteScript);
         $('#playlist>tbody').on('click','.delete', onSongDelete);
         $('#playlist>tbody').on('click','tr', onSongClick);
         $('#playlist>tbody').on('dragstart', 'tr', onDragStart);
@@ -137,20 +138,28 @@ function Trip() {
         clearRegisteredScripts();
         registerScript(scriptName, script);
     }
-    function saveScript() {
-        var script = editor.getValue();
-        if (!scriptName) {
-            scriptName = prompt('Enter a name for your script:');
-            if (!scriptName) {
-                return; // cancel
-            }
+    function onSaveAsClick() {
+        var name = prompt('Enter a name for your script:');
+        if (!name) {
+            return; // cancel
         }
+        saveCurrentScript(name);
+    }
+    function onSaveClick() {
+        if (scriptName) {
+            saveCurrentScript(scriptName);
+        } else {
+            onSaveAsClick();
+        }
+    }
+    function saveCurrentScript(name) {
+        var script = editor.getValue();
+        scriptName = name;
         localStorage.setItem('script_' + scriptName, script);
         localStorage['recent'] = scriptName;
         listScripts();
         clearRegisteredScripts();
         registerScript(scriptName, script)
-        //resetVis();
     }
     function deleteScript() {
         if (scriptName) {
@@ -414,7 +423,7 @@ function Trip() {
             stopVis();
             $song.removeClass('playing');
             $song = $song.next();
-            if ($song) {
+            if ($song.length > 0) {
                 openFile($song.data('file'));
             }
         }
@@ -445,7 +454,7 @@ function Trip() {
         
         // Analyser
         analyser = audioContext.createAnalyser();
-        analyser.smoothingTimeConstant = 0.2;
+        analyser.smoothingTimeConstant = 0.8;
         analyser.fftSize = 512;
         
         // Source
