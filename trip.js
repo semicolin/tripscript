@@ -17,6 +17,8 @@ function Trip() {
         ctx = canvas.getContext('2d');
         resize();
         
+        $('#scripts').on('click', toggleScriptList);
+        
         // events
         $(window).on('resize', resize);
         $('#browse').on('click', function() { $('#file').click(); });
@@ -27,7 +29,7 @@ function Trip() {
         $('#next').on('click', next);
         $('#toggle').on('click', toggleControls);
         $('.tab').on('click', changeTab);
-        $('#scripts').on('change', onScriptChange);
+        //$('#scripts').on('change', onScriptChange);
         $('#save').on('click', onSaveClick);
         $('#saveas').on('click', onSaveAsClick);
         $('#delete').on('click', deleteScript);
@@ -41,6 +43,8 @@ function Trip() {
         $('#playlist>tbody').on('drop', 'tr', onDrop);
         $('#music').on('dragover', onDragOver);
         $('#music').on('drop', onDrop);
+        
+        $('#tabMusic').click();
     }
     function resize() {
         width = canvas.parentNode.clientWidth;
@@ -95,58 +99,101 @@ function Trip() {
             }
         });
         scriptName = localStorage['recent'];
-        listScripts();
+        refreshScriptList();
         loadScript(scriptName);
     }
-    function listScripts() {
-        var $select = $("#scripts");
-        $select.empty();
-        $select.append($('<option value="">[untitled]</option>'));
-        $groups = $();
-        for (var key in localStorage) {
-            var slash, path, name, $groups, $group, $child;
+    function toggleScriptList(e) {
+        $('#script-list').toggle();
+        $('#script-list-close').toggle();
+    }
+    function hideScriptList() {
+        $('#script-list').hide();
+        $('#script-list-close').hide();
+    }
+    function showScriptList() {
+        $('#script-list').show();
+        $('#script-list-close').show();
+    }
+    function refreshScriptList() {
+        var $list, $ul, $li, groups, group, groupName, name, path, originalName, width;
+        originalName = scriptName; // need to change this repeatedly for width calculation
+        $('#scripts').outerWidth('auto');
+        $list = $('<div id="script-list"></div>');
+        groups = buildScriptGroups();
+        width = 0;
+        for (groupName in groups) {
+            group = groups[groupName];
+            if(groupName.length > 0) {
+                $list.append($('<div class="script-group-heading">'+groupName+'</div>'));
+                $ul = $('<ul class="script-group"></ul>');
+            } else {
+                $ul = $('<ul class="script-root"></ul>');
+            }
+            for (name in group) {
+                path = group[name];
+                $li = $('<li><a data-script-name="'+path+'">'+name+'</a></li>');
+                $ul.append($li);
+                setCurrentScriptName(path);
+                width = Math.max(width, $('#scripts').outerWidth());
+            }
+            $list.append($ul);
+        }
+        scriptName = originalName;
+        $('#script-list-close').remove();
+        $('#script-list').remove();
+        $('#scripts').after($list);
+        $('body').append($('<div id="script-list-close"></div>'));
+        
+        $('#script-list').outerWidth(width+'px');
+        $('#scripts').outerWidth(width+'px');
+        
+        // events
+        $('#script-list a').on('click', onScriptChange);
+        $('#script-list-close').on('click', hideScriptList);
+    }
+    function buildScriptGroups() {
+        var key, path, parts, name, group, groups;
+        groups = {};
+        for (key in localStorage) {
             if (key.substr(0,7) === 'script_') {
                 path = key.substr(7);
-                slash = path.indexOf('/');
-                if (slash >= 0) {
-                    group = path.substr(0,slash);
-                    name = path.substr(slash+1);
-                    $group = $groups.filter('[label='+group+']');
-                    if ($group.length === 0) {
-                        $group = $('<optgroup label="'+group+'"></optgroup>');
-                        $groups = $groups.add($group);
-                    }
-                } else {
-                    name = path;
-                    $group = $select;
+                parts = splitScriptName(path);
+                group = parts[0];
+                name = parts[1];
+                if (!(group in groups)) {
+                    groups[group] = {};
                 }
-                $group.append($('<option data-selectedtext="'+path+'" value="'+path+'">'+name+'</option>'));
+                groups[group][name] = path;
             }
         }
-        $select.append($groups);
-        $select.val(scriptName);
-        localStorage['recent'] = scriptName;
-        var selectBoxIt = $select.data("selectBox-selectBoxIt");
-        if (selectBoxIt) {
-            selectBoxIt.refresh();
+        return groups;
+    }
+    function splitScriptName(name) {
+        var slash, group;
+        slash = name.indexOf('/');
+        if (slash >= 0) {
+            group = name.substr(0,slash);
+            name = name.substr(slash+1);
         } else {
-            $select.selectBoxIt({showFirstOption:false});
+            group = '';
         }
+        return [group,name];
     }
     function onScriptChange(e) {
-        // warn about unsaved changes
-        if (editor.getValue() !== localStorage.getItem('script_' + scriptName)) {
-            if (!confirm("Warning: Your changes have not been saved!\n\nDiscard changes?")) {
-                $("#scripts").val(scriptName);
-                $('#scripts').data("selectBox-selectBoxIt").refresh();
-                if (e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                }
-                return false;
-            }
+        hideScriptList();
+        if (confirmUnsavedChanges()) {
+            loadScript($(this).data('script-name'));
         }
-        loadScript(this.value);
+    }
+    function newScript() {
+        if (confirmUnsavedChanges()) {
+            loadScript('');
+        }
+    }
+    function confirmUnsavedChanges() {
+        if (editor.getValue() !== localStorage.getItem('script_' + scriptName)) {
+            return confirm("Warning: Your changes have not been saved!\n\nDiscard changes?");
+        }
         return true;
     }
     function loadScript(name) {
@@ -159,8 +206,7 @@ function Trip() {
             script = defaultScript.toString();
             script = script.slice(script.indexOf("{") + 1, script.lastIndexOf("}"));
         }
-        scriptName = name;
-        localStorage['recent'] = scriptName;
+        setCurrentScriptName(name);
         editor.setValue(script);
         CodeMirror.commands.selectAll(editor);
         CodeMirror.commands.indentAuto(editor);
@@ -173,7 +219,9 @@ function Trip() {
         if (!name) {
             return; // cancel
         }
+        setCurrentScriptName(name);
         saveCurrentScript(name);
+        refreshScriptList();
     }
     function onSaveClick() {
         if (scriptName) {
@@ -184,25 +232,29 @@ function Trip() {
     }
     function saveCurrentScript(name) {
         var script = editor.getValue();
-        scriptName = name;
         localStorage.setItem('script_' + scriptName, script);
-        localStorage['recent'] = scriptName;
-        listScripts();
         resetScriptContext();
         registerScript(scriptName, script)
     }
     function deleteScript() {
         if (scriptName) {
             localStorage.removeItem('script_' + scriptName);
-            scriptName = null;
-            listScripts();
+            setCurrentScriptName('');
+            refreshScriptList();
         }
     }
-    function newScript() {
-        //$("#scripts").data("selectBox-selectBoxIt").selectOption('');
-        if (onScriptChange.apply($('#scripts').children()[0])) {
-            $("#scripts").val('');
-            $('#scripts').data("selectBox-selectBoxIt").refresh();
+    function setCurrentScriptName(name) {
+        var parts, group;
+        scriptName = name;
+        localStorage['recent'] = scriptName;
+        if (name != null && name.length > 0) {
+            parts = splitScriptName(name);
+            group = parts[0];
+            name = parts[1];
+            if (group.length > 0) { group += ' / '; }
+            $('#scripts').html('<span class="group">'+group+'</span>'+name);
+        } else {
+            $('#scripts').text('(untitled)');
         }
     }
     function resetScriptContext() {

@@ -20,7 +20,6 @@ body {
     background-color: black;
 }
 #status {
-    z-index: 200;
     position: relative;
     top: 10px;
     width: 300px;
@@ -34,9 +33,9 @@ body {
     text-align: center;
     font-family: monospace;
     font-weight: bold;
+    z-index: 1;
 }
 #error {
-    z-index: 200;
     position: relative;
     top: 50px;
     padding: 20px;
@@ -46,6 +45,7 @@ body {
     color: #c00;
     font-family: monospace;
     font-weight: bold;
+    z-index: 1;
 }
 canvas {
     position: absolute;
@@ -76,7 +76,7 @@ canvas {
     background: #333;
     color: #ddd;
     font-size: 14px;
-    z-index: 2;
+    z-index: 3;
 }
 #toggle:hover {
     color: #0c0;
@@ -92,7 +92,7 @@ canvas {
     top: 30px;
     width: 27px;
     height: 110px;
-    z-index: 1;
+    z-index: 2;
     border-color: #666;
     border-style: solid;
     border-width: 0 0 3px 3px;
@@ -226,10 +226,8 @@ canvas {
 }
 
 #music {
-    z-index: 2;
 }
 #code {
-    z-index: 1;
 }
 #file {
     display: none;
@@ -287,6 +285,7 @@ canvas {
 #playlist .delete {
     padding-right: 5px;
     color: #666;
+    font-family: sans-serif;
 }
 #playlist .delete:hover {
     color: #c00;
@@ -304,10 +303,68 @@ canvas {
     left: 0;
     width: 100%;
     height: 48px;
-    z-index: 100;
     background-color: inherit;
     border-bottom: 3px solid #222;
     padding: 10px;
+}
+#scripts {
+    width: 100px;
+    white-space: nowrap;
+    text-align: left;
+}
+#scripts .group {
+    color: #3bf;
+}
+#script-list-close {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    z-index: 1000;
+}
+#script-list {
+    display: none;
+    position: absolute;
+    background: #333;
+    border-bottom: 1px solid #0c0;
+    padding: 2px 0;
+    color: #ccc;
+    z-index: 1001;
+}
+#script-list ul {
+    list-style: none;
+    margin: 0;
+}
+#script-list a,
+.script-group-heading {
+    padding: 2px 10px;
+}
+#script-list a {
+    display: block;
+    cursor: pointer;
+}
+#script-list a:hover {
+    color: #0c0;
+    text-decoration: none;
+}
+.script-root {
+    padding: 0;
+}
+.script-group-heading {
+    color: #3bf;
+}
+.script-group {
+    padding-left: 0;
+}
+.script-group a:before {
+    float: left;
+    padding: 0 5px;
+    color: #3bf;
+    font-weight: bold;
+    content: '/';
 }
 #editor {
     position: absolute;
