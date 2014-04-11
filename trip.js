@@ -8,7 +8,7 @@ function Trip() {
     
     function init() {
         initApi();
-        initCode();
+        initCodeEditor();
         $playlist = $('#playlist tbody');
         frame = 0;
         autoId = 0;
@@ -23,6 +23,7 @@ function Trip() {
         $('#file').on('change', onFileChange);
         $('#clear').on('click', clearPlaylist);
         $('#pause').on('click', pause);
+        $('#prev').on('click', prev);
         $('#next').on('click', next);
         $('#toggle').on('click', toggleControls);
         $('.tab').on('click', changeTab);
@@ -30,6 +31,7 @@ function Trip() {
         $('#save').on('click', onSaveClick);
         $('#saveas').on('click', onSaveAsClick);
         $('#delete').on('click', deleteScript);
+        $('#new').on('click', newScript);
         $('#playlist>tbody').on('click','.delete', onSongDelete);
         $('#playlist>tbody').on('click','tr', onSongClick);
         $('#playlist>tbody').on('dragstart', 'tr', onDragStart);
@@ -47,7 +49,7 @@ function Trip() {
         canvas.height = height;
         ctx.fillStyle = 'black';
         ctx.fillRect(0,0,width,height);
-        ctx.setTransform(1,0,0,1,width/2,height/2); // center coordinate system
+        //ctx.setTransform(1,0,0,1,width/2,height/2); // center coordinate system
     }
     function initApi() {
         window.AudioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext;
@@ -55,8 +57,7 @@ function Trip() {
         window.cancelAnimationFrame = window.cancelAnimationFrame || window.webkitCancelAnimationFrame || window.mozCancelAnimationFrame || window.msCancelAnimationFrame;
         audioContext = new AudioContext();
     }
-    function initCode() {
-        // create code editor
+    function initCodeEditor() {
         editor = CodeMirror($('#editor')[0], {
             theme: 'trip',
             lineNumbers: true,
@@ -89,7 +90,7 @@ function Trip() {
                 },
                 'Ctrl-Space': 'autocomplete',
                 'Ctrl-S': function(cm) {
-                    saveScript();
+                    onSaveClick();
                 }
             }
         });
@@ -100,24 +101,53 @@ function Trip() {
     function listScripts() {
         var $select = $("#scripts");
         $select.empty();
+        $select.append($('<option value="">[untitled]</option>'));
+        $groups = $();
         for (var key in localStorage) {
+            var slash, path, name, $groups, $group, $child;
             if (key.substr(0,7) === 'script_') {
-                $select.append($('<option>'+key.substr(7)+'</option>'));
+                path = key.substr(7);
+                slash = path.indexOf('/');
+                if (slash >= 0) {
+                    group = path.substr(0,slash);
+                    name = path.substr(slash+1);
+                    $group = $groups.filter('[label='+group+']');
+                    if ($group.length === 0) {
+                        $group = $('<optgroup label="'+group+'"></optgroup>');
+                        $groups = $groups.add($group);
+                    }
+                } else {
+                    name = path;
+                    $group = $select;
+                }
+                $group.append($('<option data-selectedtext="'+path+'" value="'+path+'">'+name+'</option>'));
             }
         }
-        $select.append($('<option value="">(new script)</option>'));
+        $select.append($groups);
         $select.val(scriptName);
         localStorage['recent'] = scriptName;
+        var selectBoxIt = $select.data("selectBox-selectBoxIt");
+        if (selectBoxIt) {
+            selectBoxIt.refresh();
+        } else {
+            $select.selectBoxIt({showFirstOption:false});
+        }
     }
     function onScriptChange(e) {
         // warn about unsaved changes
         if (editor.getValue() !== localStorage.getItem('script_' + scriptName)) {
             if (!confirm("Warning: Your changes have not been saved!\n\nDiscard changes?")) {
                 $("#scripts").val(scriptName);
-                return;
+                $('#scripts').data("selectBox-selectBoxIt").refresh();
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                return false;
             }
         }
         loadScript(this.value);
+        return true;
     }
     function loadScript(name) {
         var script;
@@ -135,7 +165,7 @@ function Trip() {
         CodeMirror.commands.selectAll(editor);
         CodeMirror.commands.indentAuto(editor);
         editor.getDoc().setSelection({line: 0, ch:0});
-        clearRegisteredScripts();
+        resetScriptContext();
         registerScript(scriptName, script);
     }
     function onSaveAsClick() {
@@ -158,7 +188,7 @@ function Trip() {
         localStorage.setItem('script_' + scriptName, script);
         localStorage['recent'] = scriptName;
         listScripts();
-        clearRegisteredScripts();
+        resetScriptContext();
         registerScript(scriptName, script)
     }
     function deleteScript() {
@@ -168,9 +198,21 @@ function Trip() {
             listScripts();
         }
     }
-    function clearRegisteredScripts() {
+    function newScript() {
+        //$("#scripts").data("selectBox-selectBoxIt").selectOption('');
+        if (onScriptChange.apply($('#scripts').children()[0])) {
+            $("#scripts").val('');
+            $('#scripts').data("selectBox-selectBoxIt").refresh();
+        }
+    }
+    function resetScriptContext() {
         dynamicCodeContext = {};
         dynamicCodeScripts = {};
+        dynamicCodeIncludes = {};
+        if (ctx) {
+            ctx.setTransform(1,0,0,1,0,0);
+            resize();
+        }
     }
     function registerScript(name, script) {
         // Syntax check
@@ -191,16 +233,18 @@ function Trip() {
     }
     function showError(err) {
         if (err.reason) { // JSHINT
-            var errStr = 'Error: ' + err.reason
-                       + '<br /> Script: ' + err.script 
-                       + '<br /> Line: ' + err.line 
-                       + '<br /> Char: ' + err.character;
-            console.log(err.reason, err.script, err.line, err.character);
+            var errStr = 'Error: ' + err.reason + ' [' + err.script;
+            if (err.line != null) {
+                errStr += ': line ' + err.line;
+            }
+            errStr += ']';
+            //console.log(err.reason, err.script, err.line, err.character);
         } else { // Runtime exception
             var errStr = 'Error: ' + err.message;
-            console.log(err.message, err.stack);
+            //console.log(err.message, err.stack);
         }
-        $('#error').html(errStr).show();
+        $('#error').text(errStr).show();
+        
     }
     function clearError() {
         $('#error').empty().hide();
@@ -247,14 +291,14 @@ function Trip() {
     function toggleControls(e) {
         var $ctrl = $('#controls');
         var $vis = $('#vis');
-        var toggle = this;
+        var $toggle = $(this);
         var hidden = function() {
-            toggle.innerHTML = '&#9668;';
+            $toggle.empty().append($('<i class="fa fa-chevron-left"></i>'));
             $vis.css('width','100%');
             resize();
         }
         var visible = function() {
-            toggle.innerHTML = '&#9658;';
+            $toggle.empty().append($('<i class="fa fa-chevron-right"></i>'));
             $vis.css('width','50%');
             resize();
         }
@@ -392,7 +436,7 @@ function Trip() {
             $song.removeClass('playing');
         } else if (status === PAUSED) {
             $song.removeClass('playing');
-            $('#pause').text('Pause');
+            $('#pause').empty().html($('<i class="fa fa-pause"></i>'));
         } else if (status === LOADING) {
             fileReader.abort();
             $song.removeClass('playing');
@@ -428,6 +472,9 @@ function Trip() {
             }
         }
     }
+    function prev(e) {
+        changeSong($song.prev());
+    }
     function next(e) {
         changeSong($song.next());
     }
@@ -437,12 +484,10 @@ function Trip() {
             source.stop();
             stopVis();
             playTime += audioContext.currentTime - startTime;
-            e.currentTarget.innerHTML = 'Resume';
+            $(this).empty().html($('<i class="fa fa-play"></i>'));
         } else if (status === PAUSED) {
             play($song, source.buffer);
-            e.currentTarget.innerHTML = 'Pause';
-        } else if (status === LOADING) {
-            status = PAUSED;
+            $(this).empty().html($('<i class="fa fa-pause"></i>'));
         }
     }
     function play(decodedSong, buffer) {
@@ -453,9 +498,9 @@ function Trip() {
         clearStatus();
         
         // Analyser
-        analyser = audioContext.createAnalyser();
-        analyser.smoothingTimeConstant = 0.8;
-        analyser.fftSize = 512;
+        if (analyser == null) {
+            analyser = audioContext.createAnalyser();
+        }
         
         // Source
         source = audioContext.createBufferSource();
@@ -498,13 +543,16 @@ function Trip() {
     function getWaveformData(analyser) {
         var wave = new Uint8Array(analyser.frequencyBinCount);
         analyser.getByteTimeDomainData(wave);
-        return Array.apply([], wave);
+        var array = Array.apply([], wave);
+        return array.map(function(x) {
+            return x/256;
+        });
     }
     function tick() {
         frame += 1;
-        var frequency = getFrequencyData(analyser);
-        var waveform = getWaveformData(analyser);
-        var args = [ctx, frame, width, height, frequency, waveform];
+        //var freq = getFrequencyData(analyser);
+        //var wave = getWaveformData(analyser);
+        var args = [ctx, analyser];
         var include = includeScript.bind(this, args);
         args.push(include);
         var func = dynamicCodeScripts[scriptName];
@@ -512,7 +560,7 @@ function Trip() {
             try {
                 func.apply(dynamicCodeContext, args);
             } catch (ex) {
-                showError(ex);
+                showError({reason: ex.message, script: scriptName, line: ex.lineNumber});
             }
         }
         startVis();
@@ -520,35 +568,41 @@ function Trip() {
     function includeScript(args, name) {
         var func;
         if (name in dynamicCodeScripts) {
-            func = dynamicCodeScripts[name];
+            //func = dynamicCodeScripts[name];
+            //return; // only run once
+            return dynamicCodeIncludes[name];
         } else {
-            var script = localStorage.getItem('script_' + name);
-            func = registerScript(name, script);
+            if ('script_' + name in localStorage) {
+                var script = localStorage.getItem('script_' + name);
+                func = registerScript(name, script);
+            } else {
+                showError({reason: 'Script not found: "' + name + '"', script: name});
+                return;
+            }
         }
         if (func != null) {
             var include = arguments.callee.bind(dynamicCodeContext, args);
             args.push(include);
-            func.apply(dynamicCodeContext, args);
+            try {
+                //func.apply(dynamicCodeContext, args);
+                var constructor = func.bind.apply(func, [null].concat(args));
+                dynamicCodeIncludes[name] = new constructor();
+                return dynamicCodeIncludes[name];
+            } catch (ex) {
+                showError({reason: ex.message, script: name, line: ex.lineNumber});
+            }
         }
     }
-    function defaultScript(ctx, frame, width, height, frequency, waveform, include) {
-        /* ctx: 2D drawing context
-         * frame: current frame number
-         * width: width of the drawing canvas
-         * height: height of the drawing canvas
-         * frequency: array of frequency data
-         * waveform: array of waveform data
-         * include(): run another script
-         */
+    function defaultScript(ctx, analyser, include) {
         function drawCircle(r) {
             ctx.beginPath();
-            ctx.arc(0, 0, r, 0, 2*Math.PI);
+            ctx.arc(0, 0, r, 0, 2*pi);
             ctx.stroke();
         }
         function drawRay(r) {
             ctx.beginPath();
             ctx.moveTo(0,0);
-            var angle = frame % (2*Math.PI);
+            var angle = frame % (2*pi);
             ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle));
             ctx.stroke();
         }
@@ -556,9 +610,9 @@ function Trip() {
             var angle, x, y;
             ctx.beginPath();
             for (var i = 0; i < rArray.length; i++) {
-                angle = (Math.PI/2) + 2 * Math.PI * i / rArray.length;
+                angle = (pi/2) + 2 * pi * i / rArray.length;
                 if (ccw) {
-                    angle = 2 * Math.PI - angle;
+                    angle = 2 * pi - angle;
                 }
                 x = rArray[i] * Math.cos(angle);
                 y = rArray[i] * Math.sin(angle);
@@ -579,11 +633,11 @@ function Trip() {
         }
 
         var scale = Math.min(width,height)/2;
-        var scaledF = frequency.map(function(x) { return x * scale; });
+        var scaledF = freq.map(function(x) { return x * scale; });
 
         var vol = scaledF.reduce(function(sum, x) { return sum+x; }, 0) / scaledF.length;
-        var speed = 1 + frequency[16]/100;
-        var hue = Math.floor(256 - frequency[0]*256);
+        var speed = 1 + freq[16]/100;
+        var hue = Math.floor(256 - freq[0]*256);
         var bass = scaledF.slice(0,32);
         var mid = scaledF.slice(32,128);
 

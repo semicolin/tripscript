@@ -2,14 +2,20 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Trip</title>
+        <title>TripScript</title>
         <!--<script src="lib/codemirror-min.js"></script>
         <link rel="stylesheet" href="lib/codemirror.css" />
         <link rel="stylesheet" href="lib/foldgutter.css" />
         <link rel="stylesheet" href="lib/show-hint.css" />-->
+        <link href="lib/font-awesome/css/font-awesome.min.css" rel="stylesheet">
         <script src="lib/jquery-2.1.0.min.js"></script>
         <script src="lib/id3-minimized.js"></script>
         <script src="lib/jshint.js"></script>
+        <!-- Selectbox -->
+        <link rel="stylesheet" href="lib/selectboxit/selectboxit.css" />
+        <link rel="stylesheet" href="selectbox-theme.css" />
+        <script src="lib/selectboxit/jquery-ui-core-widget.min.js"></script>
+        <script src="lib/selectboxit/selectboxit.min.js"></script>
         <!-- CodeMirror -->
         <link rel="stylesheet" href="lib/codemirror/lib/codemirror.css" />
         <script src="lib/codemirror/lib/codemirror.js"></script>
@@ -38,18 +44,22 @@
             <div id="error"></div>
         </div>
         <div id="controls">
-            <button id="toggle" title="Toggle Control Panel">&#9658;</button>
+            <button id="toggle" title="Toggle Control Panel"><i class="fa fa-chevron-right"></i></button>
+            <div id="playback">
+                <button id="prev" title="Previous Song"><i class="fa fa-backward"></i></button>
+                <button id="pause" title="Pause/Play"><i class="fa fa-pause"></i></button>
+                <button id="next" title="Next Song"><i class="fa fa-forward"></i></button>
+            </div>
             <div id="tabs">
                 <button id="tabMusic" class="tab active" data-panel="#music" title="Show Music Playlist">Music</button>
                 <button id="tabCode" class="tab" data-panel="#code" title="Show Script Editor">Code</button>
+                <button id="tabDocs" class="tab" data-panel="#docs" title="Show Documentation">Docs</button>
             </div>
             <div id="music" class="panel">
-                <div id="playback">
+                <div class="toolbar">
                     <input type="file" id="file" multiple="multiple"></input>
                     <button id="browse">Add Files...</button>
                     <button id="clear">Clear</button>
-                    <button id="pause">Pause</button>
-                    <button id="next">Next</button>
                 </div>
                 <div id="playlist-wrapper">
                     <table id="playlist">
@@ -68,13 +78,77 @@
                 </div>
             </div>
             <div id="code" class="panel">
-                <div id="toolbar">
+                <div class="toolbar">
                     <select id="scripts"></select>
                     <button id="save" title="Save this script (Ctrl+S)">Save</button>
                     <button id="saveas" title="Save a copy of this script">Save As...</button>
                     <button id="delete" title="Delete this script">Delete</button>
+                    <button id="new" title="Create a new script">New</button>
                 </div>
                 <div id="editor"></div>
+            </div>
+            <div id="docs" class="panel">
+                <h2>Introduction</h2>
+                <p>
+                    TripScript is a music visualization IDE built with Javascript, HTML5 Audio, and Canvas.
+                    I made it so I could experiment with music visualization without continuously recompiling
+                    the code, reloading the page, or restarting the music.
+                </p>
+                <p>
+                    All of the busywork (setting up contexts, connecting audio nodes, etc.) is taken care of behind the scenes.
+                    The interesting parts (drawing on canvas in response to music) are stored in visualization scripts that can
+                    be loaded dynamically and swapped in and out at run-time.
+                </p>
+                <p>
+                    A visualization script is simply a block of javascript code that gets executed on every animation frame.
+                    In addition to built-in javascript objects, scripts can use the following variables:
+                </p>
+                <dl>
+                    <dt><span class="var">ctx</span></dt><dd>2D drawing context for the canvas.</dd>
+                    <dt><span class="var">wave</span></dt><dd>Array of audio data in the time domain.</dd>
+                    <dt><span class="var">freq</span></dt><dd>Array of audio data in the frequency domain.</dd>
+                    <dt><span class="var">include()</span></dt><dd>Function for loading other scripts.</dd>
+                </dl>
+                <p>
+                    There are also a few pre-defined convenience variables to save you some typing:
+                </p>
+                <dl>
+                    <dt><span class="var">width</span></dt><dd><span class="var">= ctx.canvas.width</span></dd>
+                    <dt><span class="var">height</span></dt><dd><span class="var">= ctx.canvas.height</span></dd>
+                    <dt><span class="var">pi</span></dt><dd><span class="var">= Math.PI</span></dd>
+                </dl>
+                <h2>Analysing the Music</h2>
+                <p>
+                    Use the <span class="var">wave</span> and <span class="var">freq</span> arrays to
+                    access audio data in the time and frequency domains, respectively. Each domain is divided
+                    into 256 discrete bands. Each array element is a value between 0 and 1, representing
+                    the magnitude of the signal in that band. For example: <span class="var">freq[0]</span>
+                    will be close to 1 during a strong bass drum beat.
+                </p>
+                <h2>Drawing on Canvas</h2>
+                <p>
+                    The <span class="var">ctx</span> variable contains the drawing context for the canvas
+                    so you can <span class="var">stroke</span> and <span class="var">fill</span> to your heart's content.
+                    Take a look at the built-in scripts for some simple examples of what can be done.
+                    If this is your first time using canvas, check out <a href="https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Canvas_tutorial" target="_blank">Mozilla's Canvas Tutorial</a>.
+                </p>
+                <h2>Including Other Scripts</h2>
+                <p>
+                    Use the <span class="var">include()</span> function to call one visualization script from another.
+                    It takes a single string argument: The name of the script to run.
+                    Includes should always be done at the top of your script and should not be placed inside
+                    functions, loops, or conditionals.
+                </p>
+                <p>
+                    The included script will be loaded and executed in the same context as the current script. 
+                    Included scripts will only be executed once and the call to <span class="var">include()</span>
+                    will do nothing if the specified script has already been loaded.
+                </p>
+                <p>
+                    To make variables or functions available to other scripts, you must attach them to the execution context object, <span class="var">this</span>.
+                    You can also use <span class="var">this</span> to share variables across animation frames.
+                </p>
+                <p>Have a good trip!</p>
             </div>
         </div>
         <script>Trip();</script>
