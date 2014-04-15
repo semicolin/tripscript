@@ -138,7 +138,7 @@ function Trip() {
             }
             $list.append($ul);
         }
-        scriptName = originalName;
+        setCurrentScriptName(originalName);
         $('#script-list-close').remove();
         $('#script-list').remove();
         $('#scripts').after($list);
@@ -208,9 +208,9 @@ function Trip() {
         }
         setCurrentScriptName(name);
         editor.setValue(script);
-        CodeMirror.commands.selectAll(editor);
-        CodeMirror.commands.indentAuto(editor);
-        editor.getDoc().setSelection({line: 0, ch:0});
+        //CodeMirror.commands.selectAll(editor);
+        //CodeMirror.commands.indentAuto(editor);
+        //editor.getDoc().setSelection({line: 0, ch:0});
         resetScriptContext();
         registerScript(scriptName, script);
     }
@@ -219,9 +219,9 @@ function Trip() {
         if (!name) {
             return; // cancel
         }
-        setCurrentScriptName(name);
         saveCurrentScript(name);
         refreshScriptList();
+        setCurrentScriptName(name);
     }
     function onSaveClick() {
         if (scriptName) {
@@ -232,9 +232,9 @@ function Trip() {
     }
     function saveCurrentScript(name) {
         var script = editor.getValue();
-        localStorage.setItem('script_' + scriptName, script);
+        localStorage.setItem('script_' + name, script);
         resetScriptContext();
-        registerScript(scriptName, script)
+        registerScript(name, script)
     }
     function deleteScript() {
         if (scriptName) {
@@ -306,33 +306,6 @@ function Trip() {
     }
     function clearStatus() {
         $('#status').empty().hide();
-    }
-    function checkScriptSyntaxMessy(script, success, error) {
-        // this ugly function is necessary because javascript does not give you a line number
-        // for syntax errors in eval()ed code. so we do syntax check using a DOM script element.
-        var syntaxError = null;
-        var previousErrorHandler = window.onerror;
-        var el = document.createElement('script');
-        el.type = 'text/javascript';
-        el.innerHTML = '(function(){\n' + script + '});'; // wrap in a function so it doesn't execute
-        window.onerror = function(msg,uri,line,col) {
-            syntaxError = {
-                message: msg,
-                lineNumber: line-1,
-                columnNumber: col
-            }
-            error(syntaxError);
-            document.body.removeChild(el);
-            return true;
-        };
-        el.onload = function() {
-            window.onerror = previousErrorHandler;
-            if(!syntaxError) {
-                success();
-            }
-            document.body.removeChild(el);
-        };
-        document.body.appendChild(el);
     }
     function getParamNames(func) {
         var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
@@ -576,35 +549,9 @@ function Trip() {
             animId = null;
         }
     }
-    function getFrequencyData(analyser) {
-        //var freq = new Uint8Array(analyser.frequencyBinCount);
-        //analyser.getByteFrequencyData(freq);
-        var freq = new Float32Array(analyser.frequencyBinCount);
-        analyser.getFloatFrequencyData(freq);
-        var array = Array.apply([], freq);
-        return array.map(function(x) {
-            var normalized = (x - analyser.minDecibels) / (analyser.maxDecibels - analyser.minDecibels);
-            if (normalized < 0) {
-                normalized = 0;
-            } else if (normalized > 1) {
-                normalized = 1;
-            }
-            return normalized;
-        });
-    }
-    function getWaveformData(analyser) {
-        var wave = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteTimeDomainData(wave);
-        var array = Array.apply([], wave);
-        return array.map(function(x) {
-            return x/256;
-        });
-    }
     function tick() {
         frame += 1;
-        //var freq = getFrequencyData(analyser);
-        //var wave = getWaveformData(analyser);
-        var args = [ctx, analyser];
+        var args = [ctx, analyser, audioContext];
         var include = includeScript.bind(this, args);
         args.push(include);
         var func = dynamicCodeScripts[scriptName];
@@ -645,74 +592,16 @@ function Trip() {
             }
         }
     }
-    function defaultScript(ctx, analyser, include) {
-        function drawCircle(r) {
-            ctx.beginPath();
-            ctx.arc(0, 0, r, 0, 2*pi);
-            ctx.stroke();
-        }
-        function drawRay(r) {
-            ctx.beginPath();
-            ctx.moveTo(0,0);
-            var angle = frame % (2*pi);
-            ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle));
-            ctx.stroke();
-        }
-        function drawPolygon(rArray, ccw) {
-            var angle, x, y;
-            ctx.beginPath();
-            for (var i = 0; i < rArray.length; i++) {
-                angle = (pi/2) + 2 * pi * i / rArray.length;
-                if (ccw) {
-                    angle = 2 * pi - angle;
-                }
-                x = rArray[i] * Math.cos(angle);
-                y = rArray[i] * Math.sin(angle);
-                if (i===0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            ctx.closePath();
-            ctx.stroke();
-        }
-        function radialSpectrum(data) {
-            var data2 = data.slice(0, data.length);
-            data2.reverse();
-            data2.push.apply(data2,data);
-            drawPolygon(data2);
-        }
-
-        var scale = Math.min(width,height)/2;
-        var scaledF = freq.map(function(x) { return x * scale; });
-
-        var vol = scaledF.reduce(function(sum, x) { return sum+x; }, 0) / scaledF.length;
-        var speed = 1 + freq[16]/100;
-        var hue = Math.floor(256 - freq[0]*256);
-        var bass = scaledF.slice(0,32);
-        var mid = scaledF.slice(32,128);
-
-        // zooming effect
-        ctx.save();
-        ctx.setTransform(speed,0,0,speed, width/2, height/2);
-        ctx.translate(-width/2,-height/2);
-        ctx.drawImage(ctx.canvas, 0, 0);
-        ctx.restore();
-
-        // outer butterflies
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = 'hsl(' + hue + ',100%,50%)';
-        radialSpectrum(bass);
-
-        // treble circles
-        ctx.lineWidth = 10;
-        ctx.strokeStyle = 'hsla(' + hue + ',100%,50%,0.5)';
-        drawCircle(scaledF[200]);
-
-        // inner burst of color
-        ctx.strokeStyle = 'hsla(' + (frame + 128) % 256 + ',100%,50%,0.2)';
-        radialSpectrum(mid);
+    function defaultScript(ctx, analyser, audioContext, include) {
+        var Music = include('Utilities/Music');
+        var Color = include('Utilities/Color');
+        var Draw  = include('Utilities/Drawing');
+        var Transform  = include('Utilities/Transform');
+        
+        Music.config(512, 0.85);
+        var freq = Music.getFrequencyData();
+        var wave = Music.getWaveformData();
+        
     }
     init();
 }
