@@ -254,6 +254,7 @@ canvas {
 #playlist thead td {
     color: #ca6;
     border-bottom: 3px solid #222;
+    cursor: pointer;
 }
 #playlist tbody {
     color: #0a0;

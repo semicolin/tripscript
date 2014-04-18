@@ -34,6 +34,7 @@ function Trip() {
         $('#saveas').on('click', onSaveAsClick);
         $('#delete').on('click', deleteScript);
         $('#new').on('click', newScript);
+        $('#playlist>thead td').on('click', onColumnClick);
         $('#playlist>tbody').on('click','.delete', onSongDelete);
         $('#playlist>tbody').on('click','tr', onSongClick);
         $('#playlist>tbody').on('dragstart', 'tr', onDragStart);
@@ -435,6 +436,29 @@ function Trip() {
             stopVis();
         }
         $playlist.empty();
+    }
+    function onColumnClick(e) {
+        function getValue($tr, sortField) {
+            var $td = $($tr.find('td')[sortField]);
+            var value = $td.text();
+            if ($td.hasClass('num')) {
+                value = parseInt(value);
+            }
+            return value;
+        }
+        var sortField = $(this).index();
+        $('#playlist>tbody>tr').each(function() {
+            var $this = $(this);
+            var value = getValue($this, sortField);
+            var $cursor = $('#playlist>tbody tr').first();
+            while (value >= getValue($cursor, sortField)) {
+                $cursor = $cursor.next();
+                if ($cursor.length === 0) {
+                    break;
+                }
+            }
+            $this.insertBefore($cursor);
+        });
     }
     function onSongDelete(e) {
         e.preventDefault();
