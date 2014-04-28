@@ -209,10 +209,12 @@ function Trip() {
         }
         setCurrentScriptName(name);
         editor.setValue(script);
+        //TODO: clear undo buffer
+        editor.clearHistory()
         //CodeMirror.commands.selectAll(editor);
         //CodeMirror.commands.indentAuto(editor);
         //editor.getDoc().setSelection({line: 0, ch:0});
-        resetScriptContext();
+        clearRegisteredScripts();
         registerScript(scriptName, script);
     }
     function onSaveAsClick() {
@@ -234,7 +236,7 @@ function Trip() {
     function saveCurrentScript(name) {
         var script = editor.getValue();
         localStorage.setItem('script_' + name, script);
-        resetScriptContext();
+        clearRegisteredScripts();
         registerScript(name, script)
     }
     function deleteScript() {
@@ -258,9 +260,12 @@ function Trip() {
             $('#scripts').text('(untitled)');
         }
     }
+    function clearRegisteredScripts() {
+        dynamicCodeScripts = {};
+        resetScriptContext();
+    }
     function resetScriptContext() {
         dynamicCodeContext = {};
-        dynamicCodeScripts = {};
         dynamicCodeIncludes = {};
         if (ctx) {
             ctx.setTransform(1,0,0,1,0,0);
@@ -279,7 +284,12 @@ function Trip() {
             }
         }
         // Register the function
-        var func = new Function(getParamNames(defaultScript), script);
+        try {
+            var func = new Function(getParamNames(defaultScript), script);
+        } catch(ex) {
+            showError(ex);
+            return null;
+        }
         dynamicCodeScripts[name] = func;
         clearError();
         return func;
@@ -565,6 +575,10 @@ function Trip() {
         startVis();
     }
     function startVis() {
+        resetScriptContext();
+        continueVis();
+    }
+    function continueVis() {
         animId = requestAnimationFrame(tick);
     }
     function stopVis() {
@@ -586,11 +600,11 @@ function Trip() {
                 showError({reason: ex.message, script: scriptName, line: ex.lineNumber});
             }
         }
-        startVis();
+        continueVis();
     }
     function includeScript(args, name) {
         var func;
-        if (name in dynamicCodeScripts) {
+        if (name in dynamicCodeIncludes) {
             //func = dynamicCodeScripts[name];
             //return; // only run once
             return dynamicCodeIncludes[name];
