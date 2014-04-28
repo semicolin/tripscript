@@ -88,23 +88,23 @@ canvas {
 }
 #playback {
     position: absolute;
-    left: -30px;
-    top: 30px;
-    width: 27px;
-    height: 110px;
+    left: -120px;
+    top: 0px;
+    width: 110px;
+    height: 30px;
     z-index: 2;
     border-color: #666;
     border-style: solid;
     border-width: 0 0 3px 3px;
     border-radius: 0 0 0 8px;
     padding: 0;
-    padding-top: 10px;
+    padding-top: 5px;
     background: #222;
     font-size: 14px;
 }
 #playback button {
     width: 22px;
-    margin-top: 10px;
+    margin-top: 0px;
     padding: 0;
     border: 0;
     outline: 0;
