@@ -12,6 +12,7 @@ function Trip() {
         $playlist = $('#playlist tbody');
         frame = 0;
         autoId = 0;
+        //fullCanvas = document.createElement('canvas');
         canvas = document.createElement('canvas');
         $('#vis').append(canvas);
         ctx = canvas.getContext('2d');
@@ -32,6 +33,9 @@ function Trip() {
         //$('#scripts').on('change', onScriptChange);
         $('#save').on('click', onSaveClick);
         $('#saveas').on('click', onSaveAsClick);
+        $('#export').on('click', exportScripts);
+        $('#import-file').on('change', onImportFileChange);
+        $('#import').on('click', function() { $('#import-file').click(); });
         $('#delete').on('click', deleteScript);
         $('#new').on('click', newScript);
         $('#playlist>thead td').on('click', onColumnClick);
@@ -44,7 +48,14 @@ function Trip() {
         $('#playlist>tbody').on('drop', 'tr', onDrop);
         $('#music').on('dragover', onDragOver);
         $('#music').on('drop', onDrop);
+        $('#option-editor-fold').on('click', onOptionEditorFold)
+        $('#option-editor-lint').on('click', onOptionEditorLint)
         
+        // load options from localstorage
+        $('#option-editor-fold').prop('checked', localStorage['option-editor-fold'] == 'enabled');
+        $('#option-editor-lint').prop('checked', localStorage['option-editor-lint'] == 'enabled');
+        
+        // starting tab
         $('#tabMusic').click();
     }
     function resize() {
@@ -58,12 +69,12 @@ function Trip() {
     }
     function initApi() {
         window.AudioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext;
+        audioContext = new AudioContext();
         window.requestAnimationFrame = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.msRequestAnimationFrame;
         window.cancelAnimationFrame = window.cancelAnimationFrame || window.webkitCancelAnimationFrame || window.mozCancelAnimationFrame || window.msCancelAnimationFrame;
-        audioContext = new AudioContext();
     }
     function initCodeEditor() {
-        editor = CodeMirror($('#editor')[0], {
+        var config = {
             theme: 'trip',
             lineNumbers: true,
             indentUnit: 4,
@@ -80,7 +91,7 @@ function Trip() {
             },
             //styleActiveLine: true,
             foldGutter: true,
-            gutters: ["CodeMirror-lint-markers","CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+            gutters: ["CodeMirror-lint-markers","CodeMirror-linenumbers","CodeMirror-foldgutter"],
             extraKeys: {
                 'Tab': function(cm) {
                     if (cm.getSelection().length > 0) {
@@ -98,10 +109,52 @@ function Trip() {
                     onSaveClick();
                 }
             }
-        });
+        };
+        if (localStorage['option-editor-lint'] !== 'enabled') {
+            config.lint = false;
+        }
+        if (localStorage['option-editor-fold'] !== 'enabled') {
+            config.foldGutter = false;
+        }
+        editor = CodeMirror($('#editor')[0], config);
+        if (localStorage['option-editor-lint'] !== 'enabled') {
+            $('.CodeMirror-lint-markers').hide();
+        }
+        if (localStorage['option-editor-fold'] !== 'enabled') {
+            $('.CodeMirror-foldgutter').hide();
+        }
         scriptName = localStorage['recent'];
         refreshScriptList();
         loadScript(scriptName);
+    }
+    function onOptionEditorFold(e) {
+        if (e.target.checked) {
+            localStorage['option-editor-fold'] = 'enabled';
+            $('.CodeMirror-foldgutter').show();
+            editor.setOption('foldGutter', true);
+        } else {
+            localStorage['option-editor-fold'] = 'disabled';
+            $('.CodeMirror-foldgutter').hide();
+            editor.setOption('foldGutter', false);
+        }
+    }
+    function onOptionEditorLint(e) {
+        if (e.target.checked) {
+            localStorage['option-editor-lint'] = 'enabled';
+            $('.CodeMirror-lint-markers').show();
+            editor.setOption('lint', {
+                options: {
+                    eqnull: true,
+                    laxbreak: true,
+                    laxcomma: true,
+                    sub: true
+                }
+            });
+        } else {
+            localStorage['option-editor-lint'] = 'disabled';
+            $('.CodeMirror-lint-markers').hide();
+            editor.setOption('lint', false);
+        }
     }
     function toggleScriptList(e) {
         $('#script-list').toggle();
@@ -116,13 +169,15 @@ function Trip() {
         $('#script-list-close').show();
     }
     function refreshScriptList() {
-        var $list, $ul, $li, groups, group, groupName, name, path, originalName, width;
+        var $list, $ul, $li, groups, group, groupNames, groupName, names, name, path, originalName, width;
         originalName = scriptName; // need to change this repeatedly for width calculation
         $('#scripts').outerWidth('auto');
         $list = $('<div id="script-list"></div>');
         groups = buildScriptGroups();
+        groupNames = Object.keys(groups).sort();
         width = 0;
-        for (groupName in groups) {
+        for (var i=0; i<groupNames.length; i++) {
+            groupName = groupNames[i];
             group = groups[groupName];
             if(groupName.length > 0) {
                 $list.append($('<div class="script-group-heading">'+groupName+'</div>'));
@@ -130,7 +185,11 @@ function Trip() {
             } else {
                 $ul = $('<ul class="script-root"></ul>');
             }
-            for (name in group) {
+            if (group) {
+                names = Object.keys(group).sort();
+            }
+            for (var j=0; j<names.length; j++) {
+                name = names[j];
                 path = group[name];
                 $li = $('<li><a data-script-name="'+path+'">'+name+'</a></li>');
                 $ul.append($li);
@@ -209,7 +268,6 @@ function Trip() {
         }
         setCurrentScriptName(name);
         editor.setValue(script);
-        //TODO: clear undo buffer
         editor.clearHistory()
         //CodeMirror.commands.selectAll(editor);
         //CodeMirror.commands.indentAuto(editor);
@@ -238,6 +296,56 @@ function Trip() {
         localStorage.setItem('script_' + name, script);
         clearRegisteredScripts();
         registerScript(name, script)
+    }
+    function exportScripts() {
+        var str, blob, scripts = [];
+        for (key in localStorage) {
+            if (key.substr(0,7) === 'script_') {
+                str = '/***************************************************************/\n';
+                str += '"' + key.substr(7) + '":function(' + getParamNames(defaultScript).join(', ') + ') {\n';
+                str += localStorage.getItem(key);
+                str += '\n}';
+                scripts.push(str);
+            }
+        }
+        str = 'scripts = {\n' + scripts.join(',\n\n') + '\n}\n';
+        blob = new Blob([str], {type: "text/plain;charset=utf-8"});
+        saveAs(blob, "tripscripts.js");
+    }
+    function exportScriptsJson() {
+        var str, blob, scripts = {};
+        for (key in localStorage) {
+            if (key.substr(0,7) === 'script_') {
+                scripts[key] = localStorage.getItem(key);
+            }
+        }
+        str = JSON.stringify(scripts, null, '\t');
+        blob = new Blob([str], {type: "text/plain;charset=utf-8"});
+        saveAs(blob, "tripscripts.txt");
+    }
+    function onImportFileChange(e) {
+        if (e.currentTarget.files.length > 0) {
+            importScripts(e.currentTarget.files[0]);
+        }
+    }
+    function importScripts(file) {
+        var reader;
+        reader = new FileReader();
+        reader.onload = function(e) {
+            var scripts;
+            try {
+                eval(e.target.result); // creates scripts object
+            } catch(e) {
+                showError(e);
+            }
+            $.each(scripts, function(name, func) {
+                var script = func.toString();
+                script = script.slice(script.indexOf("{") + 1, script.lastIndexOf("}")).trim();
+                localStorage.setItem('script_' + name, script);
+            });
+            refreshScriptList();
+        }
+        reader.readAsText(file);
     }
     function deleteScript() {
         if (scriptName) {
@@ -353,6 +461,11 @@ function Trip() {
         $this.addClass('active');
         $('.panel').hide();
         $panel.show();
+        
+        if ($this.data('panel') === '#code') {
+            editor.refresh();
+            editor.focus();
+        }
     }
     function onDragStart(e) {
         e.originalEvent.dataTransfer.setData('song', this.id);
@@ -579,11 +692,14 @@ function Trip() {
         continueVis();
     }
     function continueVis() {
+//        stopVis();
         animId = requestAnimationFrame(tick);
+//        animId = setTimeout(tick,1);
     }
     function stopVis() {
         if (animId) {
             cancelAnimationFrame(animId);
+//            clearTimeout(animId);
             animId = null;
         }
     }
@@ -592,6 +708,7 @@ function Trip() {
         var args = [ctx, analyser, audioContext];
         var include = includeScript.bind(this, args);
         args.push(include);
+        args.push(true); // isActive
         var func = dynamicCodeScripts[scriptName];
         if (func != null) {
             try {
@@ -600,37 +717,45 @@ function Trip() {
                 showError({reason: ex.message, script: scriptName, line: ex.lineNumber});
             }
         }
+        // copy full canvas to screen
+        //screenCtx.drawImage(fullCanvas,0,0);
         continueVis();
     }
     function includeScript(args, name) {
         var func;
         if (name in dynamicCodeIncludes) {
-            //func = dynamicCodeScripts[name];
-            //return; // only run once
-            return dynamicCodeIncludes[name];
+            func = dynamicCodeScripts[name]; // context pattern
+            //return dynamicCodeIncludes[name];  // run-once constructor pattern
         } else {
             if ('script_' + name in localStorage) {
                 var script = localStorage.getItem('script_' + name);
                 func = registerScript(name, script);
+                dynamicCodeIncludes[name] = {};
             } else {
                 showError({reason: 'Script not found: "' + name + '"', script: name});
                 return;
             }
         }
         if (func != null) {
-            var include = arguments.callee.bind(dynamicCodeContext, args);
-            args.push(include);
+//            var include = arguments.callee.bind(dynamicCodeContext, args);
+//            args.push(include);
+//            args.push(false); // isActive
+                args[args.length-1] = false; // isActive
             try {
-                //func.apply(dynamicCodeContext, args);
+                /* run-once constructor pattern
                 var constructor = func.bind.apply(func, [null].concat(args));
                 dynamicCodeIncludes[name] = new constructor();
+                return dynamicCodeIncludes[name];
+                */
+                // context pattern
+                func.apply(dynamicCodeIncludes[name], args);
                 return dynamicCodeIncludes[name];
             } catch (ex) {
                 showError({reason: ex.message, script: name, line: ex.lineNumber});
             }
         }
     }
-    function defaultScript(ctx, analyser, audioContext, include) {
+    function defaultScript(ctx, analyser, audioContext, include, isActive) {
         var Music = include('Utilities/Music');
         var Color = include('Utilities/Color');
         var Draw  = include('Utilities/Drawing');
