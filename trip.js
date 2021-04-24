@@ -3,8 +3,8 @@ function Trip() {
         PAUSED = 1,
         LOADING = 2,
         PLAYING = 3;
-    var audioContext, fileReader, source, analyser, status, startTime, playTime, $playlist, $song, filesToAdd, autoId, g_files,
-        canvas, ctx, width, height, frame, animId, editor, scriptName, dynamicCodeContext, dynamicCodeScripts, dirty;
+    var audioContext, fileReader, source, analyser, status, startTime, playTime, $playlist, $song, autoId,
+        canvas, ctx, width, height, frame, animId, editor, scriptName, dynamicCodeContext, dynamicCodeScripts, dynamicCodeIncludes;
     
     function init() {
         initApi();
@@ -298,7 +298,7 @@ function Trip() {
         registerScript(name, script)
     }
     function exportScripts() {
-        var str, blob, scripts = [];
+        var key, str, blob, scripts = [];
         for (key in localStorage) {
             if (key.substr(0,7) === 'script_') {
                 str = '/***************************************************************/\n';
@@ -313,7 +313,7 @@ function Trip() {
         saveAs(blob, "tripscripts.js");
     }
     function exportScriptsJson() {
-        var str, blob, scripts = {};
+        var key, str, blob, scripts = {};
         for (key in localStorage) {
             if (key.substr(0,7) === 'script_') {
                 scripts[key] = localStorage.getItem(key);
@@ -381,6 +381,7 @@ function Trip() {
         }
     }
     function registerScript(name, script) {
+        var func;
         // Syntax check
         JSHINT(script);
         for (var i=0; i<JSHINT.errors.length; i++) {
@@ -393,7 +394,7 @@ function Trip() {
         }
         // Register the function
         try {
-            var func = new Function(getParamNames(defaultScript), script);
+            func = new Function(getParamNames(defaultScript), script);
         } catch(ex) {
             showError(ex);
             return null;
@@ -403,15 +404,16 @@ function Trip() {
         return func;
     }
     function showError(err) {
+        var errStr;
         if (err.reason) { // JSHINT
-            var errStr = 'Error: ' + err.reason + ' [' + err.script;
+            errStr = 'Error: ' + err.reason + ' [' + err.script;
             if (err.line != null) {
                 errStr += ': line ' + err.line;
             }
             errStr += ']';
             //console.log(err.reason, err.script, err.line, err.character);
         } else { // Runtime exception
-            var errStr = 'Error: ' + err.message;
+            errStr = 'Error: ' + err.message;
             //console.log(err.message, err.stack);
         }
         $('#error').text(errStr).show();
