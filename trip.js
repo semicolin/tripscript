@@ -7,6 +7,7 @@ function Trip() {
         canvas, ctx, width, height, frame, animId, editor, scriptName, dynamicCodeContext, dynamicCodeScripts, dynamicCodeIncludes;
     
     function init() {
+        initStorage();
         initApi();
         initCodeEditor();
         $playlist = $('#playlist tbody');
@@ -66,6 +67,12 @@ function Trip() {
         ctx.fillStyle = 'black';
         ctx.fillRect(0,0,width,height);
         //ctx.setTransform(1,0,0,1,width/2,height/2); // center coordinate system
+    }
+    function initStorage() {
+        if (scripts && localStorage.length === 0) {
+            importScripts(scripts);
+            localStorage.setItem('recent', Object.keys(scripts)[0]);
+        }
     }
     function initApi() {
         window.AudioContext = window.AudioContext || window.webkitAudioContext || window.mozAudioContext || window.msAudioContext;
@@ -257,14 +264,17 @@ function Trip() {
         return true;
     }
     function loadScript(name) {
-        var script;
+        var script, lines;
         if (name) {
             script = localStorage.getItem('script_' + name);
         }
         if (script == null) {
             name = '';
             script = defaultScript.toString();
-            script = script.slice(script.indexOf("{") + 1, script.lastIndexOf("}"));
+            script = script.slice(script.indexOf("{") + 3, script.lastIndexOf("}"));
+            lines = script.split('\n');
+            lines = lines.map(function(line) { return line.trim(); });
+            script = lines.join('\n');
         }
         setCurrentScriptName(name);
         editor.setValue(script);
@@ -295,11 +305,18 @@ function Trip() {
         var script = editor.getValue();
         localStorage.setItem('script_' + name, script);
         clearRegisteredScripts();
-        registerScript(name, script)
+        registerScript(name, script);
     }
     function exportScripts() {
-        var key, str, blob, scripts = [];
-        for (key in localStorage) {
+        var key, str, blob, scripts = [], keys = [];
+        for (var i=0; i<localStorage.length; i++) {
+            key = localStorage.key(i);
+            if (key.substr(0,7) === 'script_') {
+                keys.push(key);
+            }
+        }
+        keys.sort();
+        keys.forEach(function(key) {
             if (key.substr(0,7) === 'script_') {
                 str = '/***************************************************************/\n';
                 str += '"' + key.substr(7) + '":function(' + getParamNames(defaultScript).join(', ') + ') {\n';
@@ -307,7 +324,7 @@ function Trip() {
                 str += '\n}';
                 scripts.push(str);
             }
-        }
+        });
         str = 'scripts = {\n' + scripts.join(',\n\n') + '\n}\n';
         blob = new Blob([str], {type: "text/plain;charset=utf-8"});
         saveAs(blob, "tripscripts.js");
@@ -325,27 +342,30 @@ function Trip() {
     }
     function onImportFileChange(e) {
         if (e.currentTarget.files.length > 0) {
-            importScripts(e.currentTarget.files[0]);
+            importScriptsFile(e.currentTarget.files[0]);
         }
     }
-    function importScripts(file) {
+    function importScriptsFile(file) {
         var reader;
         reader = new FileReader();
         reader.onload = function(e) {
             var scripts;
             try {
                 eval(e.target.result); // creates scripts object
-            } catch(e) {
-                showError(e);
+            } catch(err) {
+                showError(err);
             }
-            $.each(scripts, function(name, func) {
-                var script = func.toString();
-                script = script.slice(script.indexOf("{") + 1, script.lastIndexOf("}")).trim();
-                localStorage.setItem('script_' + name, script);
-            });
-            refreshScriptList();
-        }
+            importScripts(scripts);
+        };
         reader.readAsText(file);
+    }
+    function importScripts(scripts) {
+        $.each(scripts, function(name, func) {
+            var script = func.toString();
+            script = script.slice(script.indexOf("{") + 1, script.lastIndexOf("}")).trim();
+            localStorage.setItem('script_' + name, script);
+        });
+        refreshScriptList();
     }
     function deleteScript() {
         if (scriptName) {
@@ -766,7 +786,6 @@ function Trip() {
         Music.config(512, 0.85);
         var freq = Music.getFrequencyData();
         var wave = Music.getWaveformData();
-        
     }
     init();
 }
