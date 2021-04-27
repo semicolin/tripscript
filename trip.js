@@ -278,7 +278,7 @@ function Trip() {
         }
         setCurrentScriptName(name);
         editor.setValue(script);
-        editor.clearHistory()
+        editor.clearHistory();
         //CodeMirror.commands.selectAll(editor);
         //CodeMirror.commands.indentAuto(editor);
         //editor.getDoc().setSelection({line: 0, ch:0});
@@ -395,6 +395,12 @@ function Trip() {
     function resetScriptContext() {
         dynamicCodeContext = {};
         dynamicCodeIncludes = {};
+        if (analyser) {
+            analyser.fftSize = 2048;
+            analyser.smoothingTimeConstant = 0.8;
+            analyser.minDecibels = -100;
+            analyser.maxDecibels = -30;
+        }
         if (ctx) {
             ctx.setTransform(1,0,0,1,0,0);
             resize();
