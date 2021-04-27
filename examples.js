@@ -216,7 +216,6 @@ var tone = Music.getToneData(freq);
 var peakData = Music.getPeakData(freq);
 var rise = Music.getPctRisingPeaks();
 var peak = Music.getPctPeaks();
-var melodic = Music.guessMelodic(freq,tone);
 
 var width = ctx.canvas.width;
 var height = ctx.canvas.height;
@@ -325,7 +324,6 @@ var tone = Music.getToneData(freq);
 var peakData = Music.getPeakData(freq);
 var rise = Music.getPctRisingPeaks();
 var peak = Music.getPctPeaks();
-var melodic = Music.guessMelodic(freq,tone);
 
 var width = ctx.canvas.width;
 var height = ctx.canvas.height;
@@ -379,28 +377,27 @@ if (this.style == null || this.beat.on(32)) {
 this.hue = (this.hue || 0) + rise * 10;
 
 // seed waveform
-//if (melodic > 0.1 && melodic < 0.9) {
-    ctx.lineWidth = 10;
-    a = Math.PI * Math.random();
-    Transform.save();
-    Transform.rotate(a);
-    ctx.lineWidth = 1 + Math.round(peak);
-    ctx.fillStyle = Color.hsla(this.hue,100,0,0.3);
-    ctx.strokeStyle = Color.hsla(this.hue,100,50,0.9);
-    ctx.beginPath();
-    ctx.moveTo(0,0);
-    for (var i=0; i<wave.length-2; i+=2) {
-        var x = i * width / wave.length;
-        var y = (wave[i]-0.5) * height/8;
-        ctx.lineTo(x,y);
-    }
-    ctx.lineTo(x,0);
-    ctx.stroke();
-    ctx.fill();
-    Transform.restore();
-//}
+ctx.lineWidth = 10;
+a = Math.PI * Math.random();
+Transform.save();
+Transform.rotate(a);
+ctx.lineWidth = 1 + Math.round(peak);
+ctx.fillStyle = Color.hsla(this.hue,100,0,0.3);
+ctx.strokeStyle = Color.hsla(this.hue,100,50,0.9);
+ctx.beginPath();
+ctx.moveTo(0,0);
+for (var i=0; i<wave.length-2; i+=2) {
+    var x = i * width / wave.length;
+    var y = (wave[i]-0.5) * height/8;
+    ctx.lineTo(x,y);
+}
+ctx.lineTo(x,0);
+ctx.stroke();
+ctx.fill();
+Transform.restore();
+
 if (this.beat.on(1)) {
-    if (melodic > Math.random() * 1.5 - 0.25) {
+    if (peak < 0.2) {
         // seed circles
         r = rise*rise*width;
         ctx.lineWidth = 10+rise*100;
@@ -594,7 +591,6 @@ var tone = Music.getToneData(freq);
 var peakData = Music.getPeakData(freq);
 var rise = Music.getPctRisingPeaks();
 var peak = Music.getPctPeaks();
-var melodic = Music.guessMelodic(freq,tone);
 
 var width = ctx.canvas.width;
 var height = ctx.canvas.height;
@@ -1346,8 +1342,7 @@ if (!this._initialized) {
         peakSpeed = [],
         prevPeak = [],
         prevPeakSpeed = [],
-        prevPeakSpeedCooldown = [],
-        weightMelodic = 50;
+        prevPeakSpeedCooldown = [];
 
     /* config
      * Changes common analyser configuration options
@@ -1594,23 +1589,6 @@ if (!this._initialized) {
         return bin;
     };
 
-
-    /* guessMelodic
-     *
-     * Guess whether the music sounds melodic. Needs work.
-     *
-     * <freqData>: frequency domain signal data (use getFrequencyData())
-     * <toneData>: frequency domain tone data (use getToneData())
-     */
-    this.guessMelodic = function(freqData, toneData) {
-        var maxTone = Math.sqrt(Math.max.apply(null,toneData));
-        var avgVol = 1.5*this.avg(freqData);
-        weightMelodic += 0.1 * (maxTone - avgVol);
-        weightMelodic = Math.max(0,Math.min(1,weightMelodic));
-        return weightMelodic;
-    };
-
-
     /* BeatCounter
      *
      * Constructor function for a BeatCounter object.
@@ -1845,11 +1823,6 @@ plotValue(this.beat.on(1) && this.beat.isHit ? 1 : this.beat.on(1) ? 0.5 : 0,
           '  Confidence: ' + this.beat.confidence.toFixed(2),
           this.cursor,600);
 plotValue(this.beat.isHit ? 1 : 0, 'Hits', this.cursor,700);
-
-// guessMelodic
-var melodic = this.guessMelodic(freq,tone);
-plotValue(melodic, 'guessMelodic', this.cursor, 800);
-
 
 ctx.fillStyle = 'white';
 
