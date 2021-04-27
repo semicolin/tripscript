@@ -48,8 +48,8 @@ function Trip() {
         $('#playlist>tbody').on('drop', 'tr', onDrop);
         $('#music').on('dragover', onDragOver);
         $('#music').on('drop', onDrop);
-        $('#option-editor-fold').on('click', onOptionEditorFold)
-        $('#option-editor-lint').on('click', onOptionEditorLint)
+        $('#option-editor-fold').on('click', onOptionEditorFold);
+        $('#option-editor-lint').on('click', onOptionEditorLint);
         
         // load options from localstorage
         $('#option-editor-fold').prop('checked', localStorage['option-editor-fold'] == 'enabled');
@@ -477,12 +477,12 @@ function Trip() {
             $toggle.empty().append($('<i class="fa fa-chevron-left"></i>'));
             $vis.css('width','100%');
             resize();
-        }
+        };
         var visible = function() {
             $toggle.empty().append($('<i class="fa fa-chevron-right"></i>'));
             $vis.css('width','50%');
             resize();
-        }
+        };
         if (parseInt($ctrl.css('marginLeft')) === 0) {
             $ctrl.animate({ marginLeft: $ctrl.outerWidth() },{duration:200,complete:hidden});
             $vis.animate({ width: '100%' },{duration:200});
