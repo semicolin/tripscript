@@ -33,7 +33,7 @@ function Trip() {
         //$('#scripts').on('change', onScriptChange);
         $('#save').on('click', onSaveClick);
         $('#saveas').on('click', onSaveAsClick);
-        $('#export').on('click', exportScripts);
+        $('#export').on('click', exportScriptsJson);
         $('#import-file').on('change', onImportFileChange);
         $('#import').on('click', function() { $('#import-file').click(); });
         $('#delete').on('click', deleteScript);
@@ -306,6 +306,9 @@ function Trip() {
         clearRegisteredScripts();
         registerScript(name, script);
     }
+    function getScriptFunctionSignature() {
+        return 'function(' + getParamNames(defaultScript).join(', ') + ')';
+    }
     function exportScripts() {
         var key, str, blob, scripts = [], keys = [];
         for (var i=0; i<localStorage.length; i++) {
@@ -316,28 +319,31 @@ function Trip() {
         }
         keys.sort();
         keys.forEach(function(key) {
-            if (key.substr(0,7) === 'script_') {
-                str = '/***************************************************************/\n';
-                str += '"' + key.substr(7) + '":function(' + getParamNames(defaultScript).join(', ') + ') {\n';
-                str += localStorage.getItem(key);
-                str += '\n}';
-                scripts.push(str);
-            }
+            str = '/***************************************************************/\n';
+            str += '"' + key.substr(7) + '":"' + getScriptFunctionSignature() + ' {\n';
+            str += localStorage.getItem(key);
+            str += '\n}';
+            scripts.push(str);
         });
         str = 'scripts = {\n' + scripts.join(',\n\n') + '\n}\n';
         blob = new Blob([str], {type: "text/plain;charset=utf-8"});
         saveAs(blob, "tripscripts.js");
     }
     function exportScriptsJson() {
-        var key, str, blob, scripts = {};
-        for (key in localStorage) {
+        var key, str, blob, scripts = {}, keys = [];
+        for (var i=0; i<localStorage.length; i++) {
+            key = localStorage.key(i);
             if (key.substr(0,7) === 'script_') {
-                scripts[key] = localStorage.getItem(key);
+                keys.push(key);
             }
         }
-        str = JSON.stringify(scripts, null, '\t');
+        keys.sort();
+        keys.forEach(function(key) {
+            scripts[key.substr(7)] = localStorage.getItem(key);
+        });
+        str = JSON.stringify(scripts, null, 2);
         blob = new Blob([str], {type: "text/plain;charset=utf-8"});
-        saveAs(blob, "tripscripts.txt");
+        saveAs(blob, "tripscripts.json");
     }
     function onImportFileChange(e) {
         if (e.currentTarget.files.length > 0) {
@@ -350,7 +356,8 @@ function Trip() {
         reader.onload = function(e) {
             var scripts;
             try {
-                eval(e.target.result); // creates scripts object
+                scripts = JSON.parse(e.target.result); // JSON
+                // eval(e.target.result); // JS
             } catch(err) {
                 showError(err);
             }
@@ -361,7 +368,10 @@ function Trip() {
     function importScripts(scripts) {
         $.each(scripts, function(name, func) {
             var script = func.toString();
-            script = script.slice(script.indexOf("{") + 1, script.lastIndexOf("}")).trim();
+            var signature = getScriptFunctionSignature();
+            if(script.substr(0,signature.length) === signature) {
+                script = script.slice(script.indexOf("{") + 1, script.lastIndexOf("}")).trim();
+            }
             localStorage.setItem('script_' + name, script);
         });
         refreshScriptList();
