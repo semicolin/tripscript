@@ -100,39 +100,46 @@
                     The interesting parts (drawing on canvas in response to music) are done in visualization scripts that can
                     be loaded dynamically and swapped in and out at run-time.
                 </p>
+                <h2>How it Works</h2>
                 <p>
                     TripScript is purely a client-side application. There is no server-side code or database. 
-                    The scripts are saved to your browser's local storage, but can be exported to a .js file for portability.
+                    The scripts are saved to your browser's local storage, and can be exported to a .js file for portability.
                 </p>
                 <p>
                     A visualization script is simply a block of javascript code that gets executed on every animation frame.
-                    The active script is treated as the body of a function that receives the following arguments:
+                    It is treated as the body of a function that receives the following arguments:
                 </p>
                 <dl>
-                    <dt><span class="var">ctx</span></dt><dd><a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D">2D rendering context</a> for the canvas.</dd>
-                    <dt><span class="var">analyser</span></dt><dd>Web Audio API <a href="https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode">analyser node</a>.</dd>
-                    <dt><span class="var">audioContext</span></dt><dd>Web Audio API <a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext">audio context</a>.</dd>
+                    <dt><span class="var">ctx</span></dt><dd><a href="https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D" target="_blank">2D rendering context</a> for the canvas.</dd>
+                    <dt><span class="var">analyser</span></dt><dd>Web Audio API <a href="https://developer.mozilla.org/en-US/docs/Web/API/AnalyserNode" target="_blank">analyser node</a>.</dd>
+                    <dt><span class="var">audioContext</span></dt><dd>Web Audio API <a href="https://developer.mozilla.org/en-US/docs/Web/API/AudioContext" target="_blank">audio context</a>.</dd>
                     <dt><span class="var">include</span></dt><dd>Function for loading other scripts.</dd>
-                    <dt><span class="var">isActive</span></dt><dd>true if the script is currently active; false if it was called via <span class="var">include</span></dd>
                 </dl>
                 <h2>Analysing the Music</h2>
                 <p>
                     You can access audio data directly through the <span class="var">analyser</span> and <span class="var">audioContext</span> variables.
-                    However, I have included a music library that performs some common audio analysis tasks. 
+                    I have also written a music library script that performs some common audio analysis tasks. 
                     Take a look at the included sample scripts for examples of how to use it.
-                    
-                    Use the <span class="var">wave</span> and <span class="var">freq</span> arrays to
-                    access audio data in the time and frequency domains, respectively. Each domain is divided
-                    into 256 discrete bands. Each array element is a value between 0 and 1, representing
-                    the magnitude of the signal in that band. For example: <span class="var">freq[0]</span>
-                    will be close to 1 during a strong bass drum beat.
                 </p>
                 <h2>Drawing on Canvas</h2>
                 <p>
                     The <span class="var">ctx</span> variable contains the drawing context for the canvas
                     so you can <span class="var">stroke</span> and <span class="var">fill</span> to your heart's content.
+                    I have also written a drawing library script with functions for drawing simple shapes and lines.
                     Take a look at the built-in scripts for some simple examples of what can be done.
                     If this is your first time using canvas, check out <a href="https://developer.mozilla.org/en-US/docs/Web/Guide/HTML/Canvas_tutorial" target="_blank">Mozilla's Canvas Tutorial</a>.
+                </p>
+                <h2>Script Context</h2>
+                <p>
+                    The <span class="var">this</span> variable contains your script's context object,
+                    which can be used to share state across multiple animation frames.
+                    For example, you can create a frame counter like this:
+                </p>
+                <p>
+                    <code class="cm-s-trip">
+                        <span class="cm-keyword">this</span>.<span class="cm-property">counter</span> = <span class="cm-keyword">this</span>.<span class="cm-property">counter</span> || <span class="cm-number">0</span>;<br />
+                        <span class="cm-keyword">this</span>.<span class="cm-property">counter</span> += <span class="cm-number">1</span>;<br />
+                    </code>
                 </p>
                 <h2>Including Library Scripts</h2>
                 <p>
@@ -142,27 +149,27 @@
                     Includes should always be done at the top of your script and should not be placed inside
                     functions, loops, or conditionals.
                 </p>
+                <p>
+                    I have written 4 library scripts that you can include right out of the box.
+                    For more information, open these scripts in the code editor and read the code comments.
+                </p>
+                <dl>
+                    <dt class="string">Utilities/Color</dt><dd>Functions for constructing color strings.</dd>
+                    <dt class="string">Utilities/Drawing</dt><dd>Functions for drawing stuff on the canvas.</dd>
+                    <dt class="string">Utilities/Music</dt><dd>Functions for analysing music.</dd>
+                    <dt class="string">Utilities/Transform</dt><dd>Functions for manipulating the transform matrix.</dd>
+                </dl>
                 <h2>Creating Library Scripts</h2>
                 <p>
-                    When a script is loaded from the <span class="var">include()</span> function, 
-                    it will be treated as a constructor and the constructed object will be returned.
-                    To expose your library's public functions, simply attach them to the execution context, <span class="var">this</span>.
-                    Local variables will not be visible to the calling script.
-                </p>
-                <p>
-                    Each library will only be constructed once.
-                    Subsequent calls to <span class="var">include()</span> will simply return the existing object.
+                    When a script is loaded from the <span class="var">include()</span> function,
+                    its return value is stored and subsequent calls to <span class="var">include()</span> will simply return the existing object.
                     This means that included scripts will only execute on the very first animation frame.
-                    If you want library code to execute on every frame, put it inside a public function and call
-                    that function from the active script.
                 </p>
                 <p>
-                    TIP: You can also use <span class="var">this</span> within the active script to share variables across animation frames.
+                    To make functions available to the calling script, attach them to an object and return that object.
+                    The built-in library scripts attach their functions to the context object, <span class="var">this</span>,
+                    so they can also be used in unit tests or demos when opened as the active script.
                 </p>
-                <p>
-                
-                </p>
-                <p>Have a good trip!</p>
             </div>
             <div id="options" class="panel">
                 <h2>Code Editor</h2>

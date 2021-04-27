@@ -1,11 +1,11 @@
 scripts = {
 /***************************************************************/
-"Examples/Bars":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Bars":function(ctx, analyser, audioContext, include) {
 var Color = include('Utilities/Color');
 var Music = include('Utilities/Music');
 var Draw  = include('Utilities/Drawing');
 
-Music.config(256,1);
+Music.config(256,0.9);
 
 var freq = Music.getFrequencyData();
 var peak = Music.getPeakData(freq);
@@ -43,7 +43,7 @@ for (var i=0; i<peak.length; i++) {
 },
 
 /***************************************************************/
-"Examples/Cityscape":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Cityscape":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw = include('Utilities/Drawing');
@@ -173,13 +173,13 @@ if (pctPeaks > 0.25) {
 },
 
 /***************************************************************/
-"Examples/Concentric":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Concentric":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw  = include('Utilities/Drawing');
 var Transform = include('Utilities/Transform');
 
-Music.config(512, 0.5);
+Music.config(512, 0.25);
 var freq = Music.getFrequencyData().slice(0, analyser.fftSize/8);
 
 // Transform
@@ -201,7 +201,7 @@ for (var i = 0; i<freq.length; i++) {
 },
 
 /***************************************************************/
-"Examples/Kaleidoscope":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Kaleidoscope":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw = include('Utilities/Drawing');
@@ -281,7 +281,7 @@ if (this.beat.on(8)) {
 // 4 possible positions for 2nd Kaleidoscope (-x-y, -x+y, +x-y, +x+y)
 if (this.c2x == null || this.beat.on(32)) {
     this.c2x = (Math.random()>0.5?1:-1);
-    this.c2y = 1 //(Math.random()>0.5?1:-1); // -1 causes flickering?
+    this.c2y = 1; //(Math.random()>0.5?1:-1); // -1 causes flickering?
 }
 
 // Kaleidoscope #1
@@ -310,7 +310,7 @@ if (this.c2x !== 0) {
 },
 
 /***************************************************************/
-"Examples/Kaleidoscope 2":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Kaleidoscope 2":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw = include('Utilities/Drawing');
@@ -517,7 +517,7 @@ if (this.c3x !== 0) {
 },
 
 /***************************************************************/
-"Examples/Landscape":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Landscape":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw = include('Utilities/Drawing');
@@ -578,7 +578,7 @@ Transform.mirror(width/2,height*0.66,Math.PI/2);
 },
 
 /***************************************************************/
-"Examples/Light Painting":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Light Painting":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw = include('Utilities/Drawing');
@@ -658,13 +658,13 @@ this.y += dy;
 },
 
 /***************************************************************/
-"Examples/Polar Oscilliscope":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Polar Oscilliscope":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw  = include('Utilities/Drawing');
 var Transform  = include('Utilities/Transform');
 var wave1, wave2, scale;
-
+Music.config();
 wave1 = Music.getWaveformData(32);
 scale1 = Math.min(ctx.canvas.width, ctx.canvas.height)*0.6;
 wave2 = Music.getWaveformData(0);
@@ -695,7 +695,7 @@ ctx.fill();
 },
 
 /***************************************************************/
-"Examples/Polar Spectrogram":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Polar Spectrogram":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Transform  = include('Utilities/Transform');
@@ -725,7 +725,7 @@ for (var i = 0; i<freq.length; i++) {
 },
 
 /***************************************************************/
-"Examples/Spinner":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Spinner":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw = include('Utilities/Drawing');
@@ -780,7 +780,7 @@ Draw.radialSpectrum(mid);
 },
 
 /***************************************************************/
-"Examples/Strings":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Strings":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw  = include('Utilities/Drawing');
@@ -835,7 +835,7 @@ for (var f=min; f<max; f++) {
 },
 
 /***************************************************************/
-"Examples/Strings2":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Strings2":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw  = include('Utilities/Drawing');
@@ -887,7 +887,7 @@ for (var f=min; f<max; f++) {
 },
 
 /***************************************************************/
-"Examples/Strings3":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Strings3":function(ctx, analyser, audioContext, include) {
 var Music = include('Utilities/Music');
 var Color = include('Utilities/Color');
 var Draw  = include('Utilities/Drawing');
@@ -976,7 +976,7 @@ for (var f0=min; f0<max; f0++) {
 },
 
 /***************************************************************/
-"Examples/Wave Grid":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Wave Grid":function(ctx, analyser, audioContext, include) {
 var Color = include('Utilities/Color');
 var Music = include('Utilities/Music');
 var Draw = include('Utilities/Drawing');
@@ -1030,7 +1030,7 @@ ctx.rect(x0,y0,dx,dy);
 },
 
 /***************************************************************/
-"Examples/Waveform":function(ctx, analyser, audioContext, include, isActive) {
+"Examples/Waveform":function(ctx, analyser, audioContext, include) {
 var Color = include('Utilities/Color');
 var Music = include('Utilities/Music');
 var Draw  = include('Utilities/Drawing');
@@ -1056,7 +1056,7 @@ ctx.stroke();
 },
 
 /***************************************************************/
-"Utilities/Color":function(ctx, analyser, audioContext, include, isActive) {
+"Utilities/Color":function(ctx, analyser, audioContext, include) {
 /* Color
  *
  * Utility functions for constructing color strings.
@@ -1091,10 +1091,12 @@ this.rgba = function(r,g,b,a) {
     a = (a != null ? a : 1.0);
     return 'rgba(' + r%256 + ',' + g%256 + ',' + b%256 + ',' + a + ')';
 };
+
+return this;
 },
 
 /***************************************************************/
-"Utilities/Drawing":function(ctx, analyser, audioContext, include, isActive) {
+"Utilities/Drawing":function(ctx, analyser, audioContext, include) {
 /* Drawing
  *
  * A collection of utility functions for drawing stuff.
@@ -1321,10 +1323,12 @@ this.debug = function(text /*, ...*/) {
     ctx.fillText(formattedText,10,30);
     ctx.restore();
 };
+
+return this;
 },
 
 /***************************************************************/
-"Utilities/Music":function(ctx, analyser, audioContext, include, isActive) {
+"Utilities/Music":function(ctx, analyser, audioContext, include) {
 /* Music
  *
  * Utility functions for analysing music.
@@ -1334,8 +1338,8 @@ this.debug = function(text /*, ...*/) {
  *    Music.config(1024,0.5);
  *    var freq = Music.getFrequencyData();
  */
-var init = (function() {
-    var _lib = this;
+if (!this._initialized) {
+    this._initialized = true;
     
     /* private variables */
     var peakData = [],
@@ -1348,17 +1352,13 @@ var init = (function() {
     /* config
      * Changes common analyser configuration options
      * <fftSize>: twice the frequency bin count (32 - 2048; power of 2)
-     * <timeSmoothing>: averages audio data with previous frame (0.0 - 1.0)
+     * <smoothingTimeConstant>: averages audio data with previous frame (0.0 - 1.0)
      */
-    this.config = function(fftSize, timeSmoothing) {
-        analyser.fftSize = fftSize;
-        analyser.timeSmoothing = timeSmoothing;
+    this.config = function(fftSize, smoothingTimeConstant) {
+        analyser.fftSize = fftSize || 2048;
+        analyser.smoothingTimeConstant = smoothingTimeConstant || 0.8;
     };
 
-    this.SpectrumAnalyser = function() {
-        
-    };
-    
     /* getFrequencyData
      *
      * Returns an array representing the current audio signal in the frequency domain.
@@ -1776,92 +1776,87 @@ var init = (function() {
         };
     };
     
-});
-if (!this.initialized) {
-    init.apply(this);
-    this.initialized = true;
     return this;
 }
-if (isActive) {
-    /*********************** UNIT TESTS ***********************/
+/*********************** UNIT TESTS ***********************/
+var Draw = include('Utilities/Drawing');
 
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = 'white';
-    ctx.font = '12px sans-serif';
-    this.config(1024);
-    this.cursor = (this.cursor+5)%640 || 0;
+ctx.lineWidth = 4;
+ctx.strokeStyle = 'white';
+ctx.font = '12px sans-serif';
+this.config(1024,0.8);
+this.cursor = (this.cursor+5)%640 || 0;
 
-    var plotArray = function(array,label,y) {
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0,y,ctx.canvas.width,100);
-        ctx.fillStyle = 'white';
-        ctx.fillText(label,0,y+15);
-        for (var i=0; i<array.length; i++) {
-            ctx.beginPath();
-            ctx.moveTo(5*i+2,y+20);
-            ctx.lineTo(5*i+2,y+20+70*array[i]);
-            ctx.stroke();
-        }
-    }
-    var plotValue = function(value,label,x,y) {
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0,y,ctx.canvas.width,20);
-        ctx.fillRect(x,y,5,100);
-        ctx.fillStyle = 'white';
-        ctx.fillText(label,0,y+15);
-        ctx.beginPath();
-        ctx.moveTo(x,y+20);
-        ctx.lineTo(x,y+20+value*70);
-        ctx.stroke();
-    };
-
-    // getWaveformData
-    var wave = this.getWaveformData();
-    plotArray(wave,'getWaveformData',0);
-
-    // getFrequencyData
-    var freq = this.getFrequencyData();
-    plotArray(freq,'getFrequencyData',100);
-
-    // getPeakData
-    var peak = this.getPeakData(freq);
-    plotArray(peak,'getPeakData',200);
-
-    // getToneData
-    var tone = this.getToneData(freq);
-    plotArray(tone,'getToneData',300);
-
-    // getPctPeaks
-    var pctPeaks = this.getPctPeaks(freq);
-    plotValue(pctPeaks,'getPctPeaks',this.cursor,400);
-
-    //pctRisingPeaks
-    var pctRisingPeaks = this.getPctRisingPeaks();
-    plotValue(pctRisingPeaks,'getPctRisingPeaks',this.cursor,500);
-
-    // BeatCounter
-    this.beat = this.beat || new this.BeatCounter();
-    this.beat.countIf(pctRisingPeaks > 0.25);
-    //this.beat.update(pctRisingPeaks);
-    plotValue(this.beat.on(1) && this.beat.isHit ? 1 : this.beat.on(1) ? 0.5 : 0,
-              'BeatCounter ' + this.beat.count + 
-              '  BPM: ' + this.beat.bpm.toFixed(2) + 
-              '  Confidence: ' + this.beat.confidence.toFixed(2),
-              this.cursor,600);
-    plotValue(this.beat.isHit ? 1 : 0, 'Hits', this.cursor,700);
-
-    // guessMelodic
-    var melodic = this.guessMelodic(freq,tone);
-    plotValue(melodic, 'guessMelodic', this.cursor, 800);
-    
-    
+var plotArray = function(array,label,y) {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0,y,ctx.canvas.width,100);
     ctx.fillStyle = 'white';
-    //ctx.fillText(isActive,0,800);
-}
+    ctx.fillText(label,0,y+15);
+    for (var i=0; i<array.length; i++) {
+        ctx.beginPath();
+        ctx.moveTo(5*i+2,y+20);
+        ctx.lineTo(5*i+2,y+20+70*array[i]);
+        ctx.stroke();
+    }
+};
+var plotValue = function(value,label,x,y) {
+    ctx.fillStyle = 'black';
+    ctx.fillRect(0,y,ctx.canvas.width,20);
+    ctx.fillRect(x,y,5,100);
+    ctx.fillStyle = 'white';
+    ctx.fillText(label,0,y+15);
+    ctx.beginPath();
+    ctx.moveTo(x,y+20);
+    ctx.lineTo(x,y+20+value*70);
+    ctx.stroke();
+};
+
+// getWaveformData
+var wave = this.getWaveformData();
+plotArray(wave,'getWaveformData',0);
+
+// getFrequencyData
+var freq = this.getFrequencyData();
+plotArray(freq,'getFrequencyData',100);
+
+// getPeakData
+var peak = this.getPeakData(freq);
+plotArray(peak,'getPeakData',200);
+
+// getToneData
+var tone = this.getToneData(freq);
+plotArray(tone,'getToneData',300);
+
+// getPctPeaks
+var pctPeaks = this.getPctPeaks(freq);
+plotValue(pctPeaks,'getPctPeaks',this.cursor,400);
+
+//pctRisingPeaks
+var pctRisingPeaks = this.getPctRisingPeaks();
+plotValue(pctRisingPeaks,'getPctRisingPeaks',this.cursor,500);
+
+// BeatCounter
+this.beat = this.beat || new this.BeatCounter();
+this.beat.countIf(pctRisingPeaks > 0.25);
+//this.beat.update(pctRisingPeaks);
+plotValue(this.beat.on(1) && this.beat.isHit ? 1 : this.beat.on(1) ? 0.5 : 0,
+          'BeatCounter ' + this.beat.count + 
+          '  BPM: ' + this.beat.bpm.toFixed(2) + 
+          '  Confidence: ' + this.beat.confidence.toFixed(2),
+          this.cursor,600);
+plotValue(this.beat.isHit ? 1 : 0, 'Hits', this.cursor,700);
+
+// guessMelodic
+var melodic = this.guessMelodic(freq,tone);
+plotValue(melodic, 'guessMelodic', this.cursor, 800);
+
+
+ctx.fillStyle = 'white';
+
 },
 
 /***************************************************************/
-"Utilities/Transform":function(ctx, analyser, audioContext, include, isActive) {
+"Utilities/Transform":function(ctx, analyser, audioContext, include) {
 /* Transform
  *
  * A collection of utility functions for manipulating the transform matrix
@@ -2144,10 +2139,7 @@ this.kaleidoscope_old = function(options) {
         this.restore();
     }
 };
-/*
-ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-//this.kaleidoscope(6,null,null,0,null,null,true);
-this.kaleidoscope({slices:6,debug:true});
-*/
+
+return this;
 }
 }

@@ -203,6 +203,9 @@ canvas {
     font-family: monospace;
     color: #0b0;
 }
+#docs .string {
+    color: #ff0;
+}
 #docs h2,
 #options h2 {
     color: #f80;
@@ -221,7 +224,12 @@ canvas {
     margin-left: 40px;
 }
 #docs dd {
-    
+    height: 16px;
+}
+#docs code {
+    display: block;
+    color: #ddd;
+    padding-left: 40px;
 }
 #docs a {
     color: #eee;

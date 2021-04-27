@@ -13,7 +13,6 @@ function Trip() {
         $playlist = $('#playlist tbody');
         frame = 0;
         autoId = 0;
-        //fullCanvas = document.createElement('canvas');
         canvas = document.createElement('canvas');
         $('#vis').append(canvas);
         ctx = canvas.getContext('2d');
@@ -720,70 +719,45 @@ function Trip() {
         continueVis();
     }
     function continueVis() {
-//        stopVis();
         animId = requestAnimationFrame(tick);
-//        animId = setTimeout(tick,1);
     }
     function stopVis() {
         if (animId) {
             cancelAnimationFrame(animId);
-//            clearTimeout(animId);
             animId = null;
         }
     }
     function tick() {
         frame += 1;
-        var args = [ctx, analyser, audioContext];
-        var include = includeScript.bind(this, args);
-        args.push(include);
-        args.push(true); // isActive
         var func = dynamicCodeScripts[scriptName];
         if (func != null) {
             try {
-                func.apply(dynamicCodeContext, args);
+                func.apply(dynamicCodeContext, [ctx, analyser, audioContext, includeScript]);
             } catch (ex) {
                 showError({reason: ex.message, script: scriptName, line: ex.lineNumber});
             }
         }
-        // copy full canvas to screen
-        //screenCtx.drawImage(fullCanvas,0,0);
         continueVis();
     }
-    function includeScript(args, name) {
-        var func;
+    function includeScript(name) {
         if (name in dynamicCodeIncludes) {
-            func = dynamicCodeScripts[name]; // context pattern
-            //return dynamicCodeIncludes[name];  // run-once constructor pattern
-        } else {
-            if ('script_' + name in localStorage) {
-                var script = localStorage.getItem('script_' + name);
-                func = registerScript(name, script);
-                dynamicCodeIncludes[name] = {};
-            } else {
-                showError({reason: 'Script not found: "' + name + '"', script: name});
-                return;
-            }
-        }
-        if (func != null) {
-//            var include = arguments.callee.bind(dynamicCodeContext, args);
-//            args.push(include);
-//            args.push(false); // isActive
-                args[args.length-1] = false; // isActive
+            return dynamicCodeIncludes[name];
+        } else if ('script_' + name in localStorage) {
+            var script = localStorage.getItem('script_' + name);
+            var func = registerScript(name, script);
             try {
-                /* run-once constructor pattern
-                var constructor = func.bind.apply(func, [null].concat(args));
-                dynamicCodeIncludes[name] = new constructor();
-                return dynamicCodeIncludes[name];
-                */
-                // context pattern
-                func.apply(dynamicCodeIncludes[name], args);
+                dynamicCodeIncludes[name] = func.apply({}, [ctx, analyser, audioContext, includeScript]);
                 return dynamicCodeIncludes[name];
             } catch (ex) {
                 showError({reason: ex.message, script: name, line: ex.lineNumber});
+                return;
             }
+        } else {
+            showError({reason: 'Script not found: "' + name + '"', script: name});
+            return;
         }
     }
-    function defaultScript(ctx, analyser, audioContext, include, isActive) {
+    function defaultScript(ctx, analyser, audioContext, include) {
         var Music = include('Utilities/Music');
         var Color = include('Utilities/Color');
         var Draw  = include('Utilities/Drawing');
