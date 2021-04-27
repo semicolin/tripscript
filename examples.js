@@ -1540,20 +1540,6 @@ if (!this._initialized) {
         }
         return tones;
     };
-    /* old implementation
-    this.getToneData = function(freq,r) {
-        var a,b,neighborhood,mean;
-        var deviations = [];
-        r = r || 1;
-        for (var f=0; f<freq.length; f++) {
-            a = Math.max(f - r, 0);
-            b = Math.min(f + r, freq.length-1);
-            neighborhood = freq.slice(a, b);
-            mean = this.avg(neighborhood);
-            deviations[f] = Math.max(0, freq[f] - mean);
-        }
-        return deviations;
-    };*/
 
     /* avg
      *
